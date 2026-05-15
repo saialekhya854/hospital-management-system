@@ -7,16 +7,15 @@ mail = Mail()
 SECRET_KEY = "hms-super-secret-key-change-in-prod"
 
 # ── Database Configuration ────────────────────
-DB_NAME = "HospitalManagement"
-DB_USER = "postgres"
-DB_PASS = urllib.parse.quote_plus("Alekhya")
-DB_HOST = "localhost"
-DB_PORT = "5432"
+import os
+from flask_mail import Mail
 
-DATABASE_URL = f"postgresql://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+mail = Mail()
 
-# REQUIRED for Flask-SQLAlchemy
-SQLALCHEMY_DATABASE_URI = DATABASE_URL
+SECRET_KEY = os.environ.get("SECRET_KEY")
+
+SQLALCHEMY_DATABASE_URI = os.environ.get("DATABASE_URL")
+
 SQLALCHEMY_TRACK_MODIFICATIONS = False
 
 
@@ -37,9 +36,14 @@ PAGINATION = {
 MAIL_SERVER = "smtp.gmail.com"
 MAIL_PORT = 587
 MAIL_USE_TLS = True
-MAIL_USERNAME = "saialekhya25@gmail.com"
-MAIL_PASSWORD = "tgge zelw njal poyp"
-MAIL_DEFAULT_SENDER = ("HMS", "saialekhya25@gmail.com")
+
+MAIL_USERNAME = os.environ.get("MAIL_USERNAME")
+MAIL_PASSWORD = os.environ.get("MAIL_PASSWORD")
+
+MAIL_DEFAULT_SENDER = (
+    "HMS",
+    os.environ.get("MAIL_USERNAME")
+)
 
 # ── App meta ─────────────────────────────────
 APP_NAME = "Hospital Management System"

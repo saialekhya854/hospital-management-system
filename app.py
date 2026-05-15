@@ -8,7 +8,7 @@ from flask_mail import Message
 from flask_migrate import Migrate
 from apscheduler.schedulers.background import BackgroundScheduler
 import atexit
-
+import os
 import config
 from config import mail
 
@@ -42,7 +42,7 @@ def create_app():
     app.config.from_object(config)
 
     # REQUIRED FOR SQLALCHEMY
-    app.config["SQLALCHEMY_DATABASE_URI"] = config.DATABASE_URL
+    app.config["SQLALCHEMY_DATABASE_URI"] = config.SQLALCHEMY_DATABASE_URI
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     
     # init extensions
@@ -159,4 +159,5 @@ def create_app():
 app = create_app()
 
 if __name__ == "__main__":
-    app.run(debug=True, use_reloader=True)
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
