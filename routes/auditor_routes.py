@@ -5,7 +5,7 @@ Accessible only by users with role = 'Auditor'
 """
 
 from flask import Blueprint, render_template, request, session, redirect, jsonify
-from httpcore import Response
+from flask import Response
 from sqlalchemy import func, text, extract, cast, Date
 import datetime
 import math
