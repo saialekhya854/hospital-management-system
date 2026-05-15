@@ -1,0 +1,147 @@
+{% extends "common/base.html" %}
+
+{% block title %}Manage Leave{% endblock %}
+{% block page_heading %}Manage Leave{% endblock %}
+
+{% block sidebar_nav %}
+
+<span class="nav-label">Doctor</span>
+
+<a href="/doctor/dashboard" class="nav-link">
+    <i class="bi bi-speedometer2"></i>
+    Dashboard
+</a>
+
+<a href="/doctor/calendar" class="nav-link">
+    <i class="bi bi-calendar3"></i>
+    My Calendar
+</a>
+
+<a href="/doctor/manage-leave" class="nav-link active">
+    <i class="bi bi-calendar-x"></i>
+    Manage Leave
+</a>
+
+<a href="/doctor/appointments" class="nav-link">
+    <i class="bi bi-calendar2-check"></i>
+    My Appointments
+</a>
+
+<a href="/doctor/patient-history" class="nav-link">
+    <i class="bi bi-clock-history"></i>
+    Patient History
+</a>
+
+<a href="/doctor/add-treatment" class="nav-link">
+    <i class="bi bi-clipboard2-pulse"></i>
+    Add Treatment
+</a>
+
+<a href="/doctor/profile" class="nav-link">
+    <i class="bi bi-person-circle"></i>
+    My Profile
+</a>
+
+<span class="nav-label">Account</span>
+
+<a href="/logout" class="nav-link text-danger">
+    <i class="bi bi-box-arrow-right"></i>
+    Logout
+</a>
+
+{% endblock %}
+
+{% block content %}
+
+<div class="hms-card p-4">
+
+    <h5 class="mb-4">
+        <i class="bi bi-calendar-x text-danger"></i>
+        Apply Leave
+    </h5>
+
+    <form method="POST">
+
+        <div class="mb-3">
+
+            <label class="form-label">
+                Leave Date
+            </label>
+
+            <input
+                type="date"
+                name="leave_date"
+                class="form-control"
+                required
+            >
+
+        </div>
+
+        <div class="mb-3">
+
+            <label class="form-label">
+                Reason
+            </label>
+
+            <textarea
+                name="reason"
+                class="form-control"
+                rows="3">
+            </textarea>
+
+        </div>
+
+        <button class="btn btn-danger">
+            Add Leave
+        </button>
+
+    </form>
+
+</div>
+
+<div class="hms-card mt-4">
+
+    <div class="card-header">
+        <h6>Leave History</h6>
+    </div>
+
+    <div class="card-body p-0">
+
+        <table class="table mb-0">
+
+            <thead>
+
+                <tr>
+                    <th>Date</th>
+                    <th>Reason</th>
+                </tr>
+
+            </thead>
+
+            <tbody>
+
+                {% for leave in leaves %}
+
+                <tr>
+
+                    <td>
+                        {{ leave.leave_date }}
+                    </td>
+
+                    <td>
+                        {{ leave.reason or "-" }}
+                    </td>
+
+                </tr>
+
+                {% endfor %}
+
+            </tbody>
+
+        </table>
+
+    </div>
+
+</div>
+
+{% endblock %}

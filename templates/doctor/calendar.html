@@ -1,0 +1,709 @@
+{% extends "common/base.html" %}
+{% block title %}My Calendar{% endblock %}
+{% block page_heading %}My Calendar{% endblock %}
+
+{% block sidebar_nav %}
+<span class="nav-label">Doctor</span>
+<a href="/doctor/dashboard" class="nav-link"><i class="bi bi-speedometer2"></i> Dashboard</a>
+<a href="/doctor/calendar" class="nav-link active"><i class="bi bi-calendar3"></i> My Calendar</a>
+<a href="/doctor/manage-leave" class="nav-link">
+    <i class="bi bi-calendar-x"></i>
+    Manage Leave
+</a>
+<a href="/doctor/appointments" class="nav-link"><i class="bi bi-calendar2-check"></i> My Appointments</a>
+<a href="/doctor/patient-history" class="nav-link"><i class="bi bi-clock-history"></i> Patient History</a>
+<a href="/doctor/add-treatment" class="nav-link"><i class="bi bi-clipboard2-pulse"></i> Add Treatment</a>
+<a href="/doctor/profile" class="nav-link"><i class="bi bi-person-circle"></i> My Profile</a>
+<span class="nav-label">Account</span>
+<a href="/logout" class="nav-link text-danger"><i class="bi bi-box-arrow-right"></i> Logout</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+  .week-strip {
+    display: flex;
+    gap: .5rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .week-day {
+    flex: 1;
+    text-align: center;
+    padding: .65rem .4rem;
+    border: 2px solid #e3e8f0;
+    border-radius: 10px;
+    cursor: pointer;
+    background: #fff;
+    transition: all .18s;
+    font-weight: 700;
+  }
+
+  .week-day .wd-name {
+    font-size: .65rem;
+    color: #aaa;
+    display: block;
+    text-transform: uppercase;
+  }
+
+  .week-day .wd-num {
+    font-size: 1.2rem;
+    color: #134e4a;
+  }
+
+  .week-day.active {
+    border-color: var(--hms-primary);
+    background: var(--hms-primary);
+  }
+
+  .week-day.active .wd-name,
+  .week-day.active .wd-num {
+    color: #fff;
+  }
+
+  .week-day:hover:not(.active) {
+    border-color: var(--hms-primary);
+  }
+
+  .appt-row {
+    cursor: pointer;
+    transition: background .15s;
+  }
+
+  .appt-row:hover {
+    background: #f0f7ff !important;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- KPI -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#ccfbf1;color:#0d9488;"><i class="bi bi-calendar2"></i></div>
+      <div>
+        <div class="stat-label">Appts Today</div>
+        <a href="/doctor/appointments?tab=today" class="stat-value text-decoration-none" id="kpiTotal">—</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#ffe4e6;color:#e11d48;"><i class="bi bi-activity"></i></div>
+      <div>
+        <div class="stat-label">In-Progress</div>
+        <a href="/doctor/appointments?tab=in-progress" class="stat-value text-decoration-none" id="kpiInProgress">—</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fff3cd;color:#f39c12;"><i class="bi bi-person-check"></i></div>
+      <div>
+        <div class="stat-label">Checked-In</div>
+        <a href="/doctor/appointments?tab=checked-in" class="stat-value text-decoration-none" id="kpiCheckedIn">—</a>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#d1fae5;color:#16a34a;"><i class="bi bi-check-circle"></i></div>
+      <div>
+        <div class="stat-label">Scheduled</div>
+        <a href="/doctor/appointments?tab=scheduled" class="stat-value text-decoration-none" id="kpiScheduled">—</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Week Strip -->
+<div class="hms-card">
+  <div class="card-header d-flex align-items-center">
+    <i class="bi bi-calendar3 text-primary"></i>
+    <h6 class="ms-2">Week View</h6>
+    <div class="ms-auto d-flex gap-2">
+      <button class="btn btn-sm btn-outline-secondary" id="prevWeek">◀</button>
+      <button class="btn btn-sm btn-outline-secondary" id="nextWeek">▶</button>
+    </div>
+  </div>
+  <div class="card-body">
+    <div class="week-strip" id="weekStrip"></div>
+
+    <div class="d-flex align-items-center justify-content-between mb-3">
+      <h6 class="fw-bold mb-0" id="dayLabel">Today's Appointments</h6>
+      <button class="btn btn-sm btn-hms-primary"
+            data-bs-toggle="modal"
+            data-bs-target="#addTreatmentModal">
+      <i class="bi bi-plus-lg me-1"></i> Add Treatment
+    </button>
+    </div>
+
+    <div class="table-responsive">
+      <table class="table hms-table mb-0">
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>Patient</th>
+            <th>Reason</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="calApptBody">
+          <tr>
+            <td colspan="5" class="text-center py-4">
+              <div class="spinner-border spinner-border-sm text-primary"></div>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="d-flex justify-content-end mt-3" id="calPagination"></div>
+  </div>
+</div>
+<!-- Add Treatment Modal -->
+<div class="modal fade" id="addTreatmentModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="bi bi-clipboard2-pulse me-2"></i>
+          Add Treatment
+        </h5>
+
+        <button type="button"
+                class="btn-close"
+                data-bs-dismiss="modal">
+        </button>
+      </div>
+
+      <div class="modal-body">
+
+        <!-- Search Patient -->
+        <div class="hms-card mb-4">
+          <div class="card-body p-3">
+
+            <div class="input-group">
+
+              <span class="input-group-text bg-white">
+                <i class="bi bi-search"></i>
+              </span>
+
+              <input type="text"
+                     id="manualPatientSearch"
+                     class="form-control"
+                     placeholder="Search patient by name or ID">
+
+              <button class="btn btn-hms-primary"
+                      id="manualSearchBtn">
+                Search
+              </button>
+
+            </div>
+
+            <div id="manualSearchResults"
+                 class="list-group mt-2 d-none">
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Treatment Form -->
+        <div class="hms-card">
+
+          <div class="card-header">
+            <h6 class="mb-0">Treatment Details</h6>
+          </div>
+
+          <div class="card-body">
+
+            <div class="row g-3 mb-3">
+
+              <div class="col-md-3">
+                <label class="form-label">Patient ID</label>
+                <input type="text"
+                       id="fPatientIdDisplay"
+                       class="form-control"
+                       readonly>
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label">First Name</label>
+                <input type="text"
+                       id="fFName"
+                       class="form-control"
+                       readonly>
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label">Last Name</label>
+                <input type="text"
+                       id="fLName"
+                       class="form-control"
+                       readonly>
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label">Gender</label>
+                <input type="text"
+                       id="fGender"
+                       class="form-control"
+                       readonly>
+              </div>
+
+            </div>
+
+            <div class="row g-3 mb-3">
+
+              <div class="col-md-3">
+                <label class="form-label">Phone</label>
+                <input type="text"
+                       id="fPhone"
+                       class="form-control"
+                       readonly>
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label">Visit Date</label>
+                <input type="date"
+                       id="fVisitDate"
+                       class="form-control">
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label">Treatment</label>
+
+                <select id="fTreatmentSelect"
+                        class="form-select">
+                  <option value="">Select Treatment</option>
+                </select>
+              </div>
+
+              <div class="col-md-3">
+                <label class="form-label">Cost</label>
+
+                <input type="number"
+                       id="fCost"
+                       class="form-control">
+              </div>
+
+            </div>
+
+            <div class="mb-3">
+              <label class="form-label">
+                Diagnosis / Notes
+              </label>
+
+              <textarea id="fDiagnosis"
+                        class="form-control"
+                        rows="4"></textarea>
+            </div>
+
+            <div class="d-flex justify-content-end">
+
+              <button class="btn btn-hms-primary"
+                      id="submitTreatmentBtn">
+                Save Treatment
+              </button>
+
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  loadTreatmentCatalogue();
+  let weekOffset = 0;
+  let selectedDate = new Date().toISOString().split('T')[0];
+  let calPage = 1;
+  const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  function buildWeekStrip() {
+    const strip = document.getElementById('weekStrip');
+    const today = new Date();
+    strip.innerHTML = '';
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(today);
+      d.setDate(today.getDate() + weekOffset * 7 + i);
+      const iso = d.toISOString().split('T')[0];
+      const div = document.createElement('div');
+      div.className = 'week-day' + (iso === selectedDate ? ' active' : '');
+      div.dataset.date = iso;
+      div.innerHTML = `<span class="wd-name">${DAYS[d.getDay()]}</span><span class="wd-num">${d.getDate()}</span>`;
+      div.addEventListener('click', function () {
+        strip.querySelectorAll('.week-day').forEach(x => x.classList.remove('active'));
+        this.classList.add('active');
+        selectedDate = this.dataset.date;
+        document.getElementById('dayLabel').textContent = `Appointments — ${selectedDate}`;
+        loadCalAppts(1);
+      });
+      strip.appendChild(div);
+    }
+  }
+
+  async function loadKPIs() {
+    try {
+      const d = await apiRequest('/api/doctor/calendar-stats');
+      document.getElementById('kpiTotal').textContent = d.today ?? '—';
+      document.getElementById('kpiInProgress').textContent = d.in_progress ?? '—';
+      document.getElementById('kpiCheckedIn').textContent = d.checked_in ?? '—';
+      document.getElementById('kpiScheduled').textContent = d.scheduled ?? '—';
+    } catch (_) { }
+  }
+
+  async function loadCalAppts(page = 1) {
+    calPage = page;
+    const body = document.getElementById('calApptBody');
+    body.innerHTML = `<tr><td colspan="5" class="text-center py-3">
+    <div class="spinner-border spinner-border-sm text-primary"></div></td></tr>`;
+    try {
+      const data = await apiRequest(`/api/doctor/appointments?date=${selectedDate}&page=${page}`);
+      if (!data.items?.length) {
+        body.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-muted">No appointments for this date.</td></tr>';
+        return;
+      }
+      body.innerHTML = data.items.map(a => {
+        const status = (a.appointment_status || '').toLowerCase();
+
+        return `
+  <tr class="appt-row">
+    <td><strong>${a.appointment_time || '—'}</strong></td>
+    <td>${a.patient_name}</td>
+    <td>${a.reason || '—'}</td>
+    <td>${statusBadge(status)}</td>
+    <td>
+      ${
+        status === 'scheduled'
+          ? `<span class="badge bg-secondary">Awaiting Check-In</span>`
+          : ['checked-in', 'in-progress'].includes(status)
+          ? `<a href="/doctor/add-treatment?appt_id=${a.appointment_Id}" 
+      class="btn btn-sm btn-hms-primary">
+      Treat →
+   </a>`
+          : status === 'completed'
+          ? `<a href="/doctor/patient-history?patient_id=${a.patient_Id}" class="btn btn-sm btn-outline-secondary">View →</a>`
+          : '—'
+      }
+    </td>
+  </tr>`;
+      }).join('');
+      renderPagination('calPagination', page, data.total_pages, loadCalAppts);
+    } catch (_) { }
+  }
+
+  document.getElementById('prevWeek').addEventListener('click', () => { weekOffset--; buildWeekStrip(); });
+  document.getElementById('nextWeek').addEventListener('click', () => { weekOffset++; buildWeekStrip(); });
+
+  buildWeekStrip();
+  loadKPIs();
+  loadCalAppts(1);
+  let treatmentPatientId = null;
+let treatmentApptId = null;
+
+function todayISO() {
+  return new Date().toISOString().split('T')[0];
+}
+
+/* Search Patients */
+async function manualSearchPatients(q) {
+
+  if (!q.trim()) {
+    document
+      .getElementById('manualSearchResults')
+      .classList.add('d-none');
+
+    return;
+  }
+
+  try {
+
+    const data = await apiRequest(
+      `/api/doctor/search-patients?q=${encodeURIComponent(q)}`
+    );
+
+    const res = document.getElementById('manualSearchResults');
+
+    if (!data.length) {
+
+      res.innerHTML =
+        '<a class="list-group-item text-muted">No patients found</a>';
+
+    } else {
+
+      res.innerHTML = data.map(p => `
+
+        <a class="list-group-item list-group-item-action"
+           href="#"
+           onclick="selectManualPatient(
+             ${p.patient_Id},
+             '${p.FName}',
+             '${p.LName}',
+             '${p.Gender || ''}',
+             '${p.contact_No || ''}'
+           ); return false;">
+
+          ${p.FName} ${p.LName}
+
+          <span class="text-muted ms-2"
+                style="font-size:.8rem;">
+
+            PT-${String(p.patient_Id).padStart(4, '0')}
+
+          </span>
+
+        </a>
+
+      `).join('');
+    }
+
+    res.classList.remove('d-none');
+
+  } catch (err) {
+
+    console.error(err);
+
+  }
+}
+
+/* Select Patient */
+function selectManualPatient(
+  id,
+  fname,
+  lname,
+  gender,
+  phone
+) {
+
+  treatmentPatientId = id;
+
+  document
+    .getElementById('manualSearchResults')
+    .classList.add('d-none');
+
+  document.getElementById('fPatientIdDisplay').value =
+    'PT-' + String(id).padStart(4, '0');
+
+  document.getElementById('fFName').value = fname;
+  document.getElementById('fLName').value = lname;
+  document.getElementById('fGender').value = gender;
+  document.getElementById('fPhone').value = phone;
+
+  document.getElementById('fVisitDate').value =
+    todayISO();
+
+  document.getElementById('fDiagnosis').value = '';
+
+}
+
+/* Search Button Click */
+document
+  .getElementById('manualSearchBtn')
+  .addEventListener('click', () => {
+
+    manualSearchPatients(
+      document.getElementById('manualPatientSearch').value
+    );
+
+});
+
+/* Search While Typing */
+let searchTimer;
+
+document
+  .getElementById('manualPatientSearch')
+  .addEventListener('input', function () {
+
+    clearTimeout(searchTimer);
+
+    searchTimer = setTimeout(() => {
+
+      manualSearchPatients(this.value);
+
+    }, 300);
+
+});
+
+/* Load Treatments Dropdown */
+async function loadTreatmentCatalogue() {
+
+  try {
+
+    const data = await apiRequest('/api/doctor/treatments');
+
+    const sel =
+      document.getElementById('fTreatmentSelect');
+
+    sel.innerHTML =
+      '<option value="">Select treatment</option>';
+
+    data.forEach(t => {
+
+      const opt = document.createElement('option');
+
+      opt.value = t.treatment_id;
+
+      opt.textContent = t.treatment_name;
+
+      opt.dataset.cost = t.cost || '';
+
+      sel.appendChild(opt);
+
+    });
+
+  } catch (err) {
+
+    console.error(err);
+
+  }
+}
+
+/* Auto Fill Cost */
+document
+  .getElementById('fTreatmentSelect')
+  .addEventListener('change', function () {
+
+    const opt = this.options[this.selectedIndex];
+
+    document.getElementById('fCost').value =
+      opt.dataset.cost || '';
+
+});
+
+/* Init */
+loadTreatmentCatalogue();
+function openTreatmentModal(apptId) {
+
+  const modal = new bootstrap.Modal(
+    document.getElementById('addTreatmentModal')
+  );
+
+  modal.show();
+
+  console.log("Appointment ID:", apptId);
+
+}
+/* Save Treatment */
+document
+  .getElementById('submitTreatmentBtn')
+  .addEventListener('click', async () => {
+
+    const diagnosis =
+      document.getElementById('fDiagnosis')
+      .value
+      .trim();
+
+    if (!diagnosis) {
+
+      showToast(
+        'Diagnosis / Notes is required.',
+        'warning'
+      );
+
+      return;
+    }
+
+    if (!treatmentPatientId) {
+
+      showToast(
+        'Please select patient.',
+        'warning'
+      );
+
+      return;
+    }
+
+    const selEl =
+      document.getElementById('fTreatmentSelect');
+
+    const selOpt =
+      selEl.options[selEl.selectedIndex];
+
+    const payload = {
+
+      patient_id: treatmentPatientId,
+
+      appointment_id: treatmentApptId,
+
+      visit_date:
+        document.getElementById('fVisitDate').value,
+
+      treatment_id:
+        selEl.value || null,
+
+      treatment_name:
+        selEl.value
+          ? selOpt.textContent.trim()
+          : null,
+
+      cost:
+        document.getElementById('fCost').value || null,
+
+      diagnosis: diagnosis
+
+    };
+
+    const btn =
+      document.getElementById('submitTreatmentBtn');
+
+    btn.disabled = true;
+
+    btn.innerHTML =
+      '<span class="spinner-border spinner-border-sm me-1"></span> Saving...';
+
+    try {
+
+      await apiRequest(
+        '/api/doctor/add-treatment',
+        {
+          method: 'POST',
+          body: JSON.stringify(payload)
+        }
+      );
+
+      showToast(
+        'Treatment saved successfully!',
+        'success'
+      );
+
+      bootstrap
+        .Modal
+        .getInstance(
+          document.getElementById(
+            'addTreatmentModal'
+          )
+        )
+        .hide();
+
+      loadCalAppts(1);
+
+    } catch (err) {
+
+      console.error(err);
+
+      showToast(
+        'Failed to save treatment.',
+        'danger'
+      );
+
+    } finally {
+
+      btn.disabled = false;
+
+      btn.innerHTML =
+        'Save Treatment';
+
+    }
+
+});
+</script>
+
+{% endblock %}

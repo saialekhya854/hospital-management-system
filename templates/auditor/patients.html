@@ -1,0 +1,131 @@
+{% extends "common/base.html" %}
+{% block title %}Patients — Auditor View{% endblock %}
+{% block page_heading %}Patients <span class="badge bg-secondary ms-2" style="font-size:.6rem;vertical-align:middle;">Read Only</span>{% endblock %}
+
+{% block sidebar_nav %}
+<span class="nav-label">Overview</span>
+<a href="/auditor/dashboard"    class="nav-link"><i class="bi bi-speedometer2"></i> Dashboard</a>
+<span class="nav-label">Read-Only Views</span>
+<a href="/auditor/appointments" class="nav-link"><i class="bi bi-calendar2-check"></i> Appointments</a>
+<a href="/auditor/patients"     class="nav-link active"><i class="bi bi-person-lines-fill"></i> Patients</a>
+<a href="/auditor/doctors"      class="nav-link"><i class="bi bi-person-badge-fill"></i> Doctors</a>
+<a href="/auditor/billing"      class="nav-link"><i class="bi bi-receipt"></i> Billing</a>
+<a href="/auditor/export"         class="nav-link"><i class="bi bi-download"></i> Export</a>
+<span class="nav-label">Compliance</span>
+<a href="/auditor/audit-logs"   class="nav-link"><i class="bi bi-journal-text"></i> Audit Logs</a>
+<span class="nav-label">Account</span>
+<a href="/logout" class="nav-link text-danger"><i class="bi bi-box-arrow-right"></i> Logout</a>
+{% endblock %}
+
+{% block content %}
+
+<!-- Filter Bar -->
+<div class="filter-bar flex-wrap gap-2 mb-3">
+  <input type="text" id="searchInput" class="form-control form-control-sm" style="max-width:260px;"
+         placeholder="Search by name, email, or contact…">
+  <button class="btn btn-sm btn-hms-primary" id="applyBtn"><i class="bi bi-search me-1"></i>Search</button>
+  <button class="btn btn-sm btn-outline-secondary" id="resetBtn"><i class="bi bi-x-circle me-1"></i>Reset</button>
+  <span class="ms-auto text-muted small align-self-center" id="totalCount"></span>
+</div>
+
+<div class="hms-card">
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table hms-table mb-0">
+        <thead>
+          <tr>
+            <th>Full Name</th>
+            <th>Gender</th>
+            <th>Age</th>
+            <th>Blood Group</th>
+            <th>Contact</th>
+            <th>Email</th>
+            <th>Registered On</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr><td colspan="8" class="text-center py-4">
+            <div class="spinner-border spinner-border-sm text-primary"></div>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="d-flex justify-content-end p-3" id="pagination"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function(){
+  let page = 1;
+
+  const BG_COLORS = {
+    'A+':'#d1fae5','A-':'#bbf7d0','B+':'#dbeafe','B-':'#bfdbfe',
+    'AB+':'#ede9fe','AB-':'#ddd6fe','O+':'#fef9c3','O-':'#fde68a'
+  };
+
+  function bloodBadge(bg) {
+    const color = BG_COLORS[bg] || '#f3f4f6';
+    return `<span class="badge" style="background:${color};color:#1f2937;font-weight:600;">${bg}</span>`;
+  }
+
+  async function load() {
+    const params = new URLSearchParams({
+      page,
+      search: document.getElementById('searchInput').value.trim()
+    });
+
+    const r = await fetch('/auditor/api/patients?' + params);
+    const d = await r.json();
+
+    document.getElementById('totalCount').textContent = `Total: ${d.total.toLocaleString()} patients`;
+
+    const tbody = document.getElementById('tableBody');
+    if (!d.data.length) {
+      tbody.innerHTML = '<tr><td colspan="8" class="text-center text-muted py-4">No patients found</td></tr>';
+    } else {
+      tbody.innerHTML = d.data.map(p => `
+        <tr>
+          <td class="fw-semibold">${p.name}</td>
+          <td>${p.gender || '—'}</td>
+          <td>${p.age} yrs</td>
+          <td>${p.blood_group !== '—' ? bloodBadge(p.blood_group) : '—'}</td>
+          <td>${p.contact || '—'}</td>
+          <td>${p.email  || '—'}</td>
+          <td>${p.registered}</td>
+        </tr>`).join('');
+    }
+
+    renderPagination(d.pages);
+  }
+
+  function renderPagination(pages) {
+    const el = document.getElementById('pagination');
+    if (pages <= 1) { el.innerHTML = ''; return; }
+    let html = '<nav><ul class="pagination pagination-sm mb-0">';
+    html += `<li class="page-item ${page===1?'disabled':''}"><a class="page-link" href="#" data-p="${page-1}">«</a></li>`;
+    for (let p = Math.max(1, page-2); p <= Math.min(pages, page+2); p++) {
+      html += `<li class="page-item ${p===page?'active':''}"><a class="page-link" href="#" data-p="${p}">${p}</a></li>`;
+    }
+    html += `<li class="page-item ${page===pages?'disabled':''}"><a class="page-link" href="#" data-p="${page+1}">»</a></li>`;
+    html += '</ul></nav>';
+    el.innerHTML = html;
+    el.querySelectorAll('[data-p]').forEach(a => a.addEventListener('click', e => {
+      e.preventDefault(); page = +a.dataset.p; load();
+    }));
+  }
+
+  document.getElementById('applyBtn').addEventListener('click', () => { page=1; load(); });
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    document.getElementById('searchInput').value = '';
+    page = 1; load();
+  });
+  document.getElementById('searchInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') { page=1; load(); }
+  });
+
+  load();
+})();
+</script>
+{% endblock %}

@@ -1,0 +1,368 @@
+{% extends "common/base.html" %}
+{% block title %}My Appointments{% endblock %}
+{% block page_heading %}My Appointments{% endblock %}
+
+{% block sidebar_nav %}
+<span class="nav-label">Patient</span>
+<a href="/patient/profile" class="nav-link"><i class="bi bi-person-circle"></i> My Profile</a>
+<a href="/patient/appointments" class="nav-link active"><i class="bi bi-calendar2-check"></i> My Appointments</a>
+<a href="/patient/bills" class="nav-link"><i class="bi bi-receipt"></i> My Bills</a>
+<a href="/patient/treatments" class="nav-link"><i class="bi bi-clipboard2-pulse"></i> View Treatments</a>
+<span class="nav-label">Account</span>
+<a href="/logout" class="nav-link text-danger"><i class="bi bi-box-arrow-right"></i> Logout</a>
+{% endblock %}
+
+{% block content %}
+
+<!-- KPI Summary Row -->
+<div class="row g-3 mb-4">
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#dce5ff;color:#3f51b5;"><i class="bi bi-calendar2"></i></div>
+      <div><div class="stat-label">Total</div><div class="stat-value" id="kpiAll">—</div></div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#ccfbf1;color:#0d9488;"><i class="bi bi-calendar2-check"></i></div>
+      <div><div class="stat-label">Upcoming</div><div class="stat-value" id="kpiUpcoming">—</div></div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#d1fae5;color:#16a34a;"><i class="bi bi-check-circle"></i></div>
+      <div><div class="stat-label">Completed</div><div class="stat-value" id="kpiCompleted">—</div></div>
+    </div>
+  </div>
+  <div class="col-6 col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fee2e2;color:#dc2626;"><i class="bi bi-x-circle"></i></div>
+      <div><div class="stat-label">Cancelled</div><div class="stat-value" id="kpiCancelled">—</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Filter Bar -->
+<div class="filter-bar mb-3">
+  <div class="btn-group btn-group-sm" id="tabGroup">
+    <button class="btn btn-hms-primary" data-tab="All">All</button>
+    <button class="btn btn-outline-secondary" data-tab="Upcoming">Upcoming</button>
+    <button class="btn btn-outline-secondary" data-tab="Past">Past</button>
+    <button class="btn btn-outline-secondary" data-tab="Cancelled">Cancelled</button>
+  </div>
+  <button class="btn btn-sm btn-hms-primary ms-auto" data-bs-toggle="modal" data-bs-target="#bookModal">
+    <i class="bi bi-plus-lg me-1"></i> Book New
+  </button>
+</div>
+
+<!-- Appointments List -->
+<div class="hms-card">
+  <div class="card-body p-0" id="apptContainer">
+    <div class="text-center py-4">
+      <div class="spinner-border spinner-border-sm text-primary"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Book Appointment Modal -->
+<div class="modal fade" id="bookModal" tabindex="-1">
+  <div class="modal-dialog modal-lg modal-dialog-scrollable">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-calendar-plus me-2 text-primary"></i>Book Appointment</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Department <span class="text-danger">*</span></label>
+            <select id="selDept" class="form-select"></select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Doctor <span class="text-danger">*</span></label>
+            <select id="selDoctor" class="form-select" disabled>
+              <option value="">Select a department first</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Date <span class="text-danger">*</span></label>
+            <input type="date" id="apptDate" class="form-control">
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-semibold">Mode</label>
+            <select id="modeAppt" class="form-select">
+              <option>In-Person</option>
+              <option>Teleconsult</option>
+            </select>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Available Slots <span class="text-danger">*</span></label>
+            <div id="slotGrid" class="d-flex flex-wrap gap-2">
+              <p class="text-muted small mb-0">Select a doctor and date to see available slots.</p>
+            </div>
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-semibold">Reason for Visit</label>
+            <input type="text" id="reason" class="form-control" placeholder="e.g. Fever, Checkup, Follow-up…">
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2 mt-4">
+          <button id="confirmBtn" class="btn btn-hms-primary px-4">
+            <i class="bi bi-calendar-check me-1"></i> Confirm Booking
+          </button>
+          <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Cancel Confirmation Modal -->
+<div class="modal fade" id="cancelModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header border-0 pb-0">
+        <h5 class="modal-title text-danger"><i class="bi bi-exclamation-triangle-fill me-2"></i>Cancel Appointment?</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <p class="text-muted mb-2">You are about to cancel your appointment:</p>
+        <div class="p-3 rounded" style="background:#f8fafc;border:1px solid #e2e8f0;">
+          <div class="fw-semibold" id="cancelDoctorName">—</div>
+          <div class="text-muted small" id="cancelDateTime">—</div>
+          <div class="text-muted small" id="cancelReason">—</div>
+        </div>
+        <p class="text-muted mt-3 small mb-0"><i class="bi bi-info-circle me-1"></i>Appointments cannot be cancelled within 1 hour of the scheduled time.</p>
+      </div>
+      <div class="modal-footer border-0 pt-0">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Keep Appointment</button>
+        <button class="btn btn-danger" id="confirmCancelBtn">
+          <i class="bi bi-x-circle me-1"></i> Yes, Cancel It
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+  let selectedSlot = null;
+  let cancelApptId = null;
+  let aTab = "All";
+
+  // Date constraints
+  const today = new Date();
+  const minDate = today.toISOString().split('T')[0];
+  const future = new Date();
+  future.setMonth(future.getMonth() + 6);
+  if (future.getDate() !== today.getDate()) future.setDate(0);
+  const maxDate = future.toISOString().split('T')[0];
+  const dateInput = document.getElementById('apptDate');
+  dateInput.setAttribute('min', minDate);
+  dateInput.setAttribute('max', maxDate);
+  dateInput.value = minDate;
+  dateInput.addEventListener('change', function () {
+    const sel = new Date(this.value);
+    const max = new Date(); max.setMonth(max.getMonth() + 12); max.setHours(0,0,0,0);
+    const tod = new Date(); tod.setHours(0,0,0,0);
+    if (sel < tod || sel > max) {
+      showToast("Please select a valid date within the allowed range", "warning");
+      this.value = minDate;
+    }
+  });
+
+  // Load departments
+  async function loadDepts() {
+    const data = await apiRequest('/patient/api/departments');
+    document.getElementById('selDept').innerHTML =
+      '<option value="">Select department…</option>' +
+      data.map(d => `<option value="${d.dept_Id}">${d.dept_Name}</option>`).join('');
+  }
+
+  // Load doctors
+  document.getElementById('selDept').addEventListener('change', async function () {
+    const deptId = this.value;
+    const docSel = document.getElementById('selDoctor');
+    docSel.innerHTML = '<option>Loading…</option>';
+    docSel.disabled = true;
+    if (!deptId) { docSel.innerHTML = '<option value="">Select a department first</option>'; return; }
+    const data = await apiRequest(`/patient/api/doctors/${deptId}`);
+    if (!data.length) { docSel.innerHTML = '<option value="">No doctors available</option>'; return; }
+    docSel.innerHTML = '<option value="">Select doctor…</option>' +
+    data.map(d => `
+      <option
+        value="${d.doct_Id}"
+        ${d.is_on_leave ? 'disabled' : ''}
+      >
+        Dr. ${d.FName} ${d.LName}
+        ${d.is_on_leave ? '(Unavailable Today)' : ''}
+      </option>
+    `).join('');
+    docSel.disabled = false;
+  });
+
+  // Load slots
+  async function loadSlots() {
+    const doctor = document.getElementById('selDoctor').value;
+    const date = document.getElementById('apptDate').value;
+    const grid = document.getElementById('slotGrid');
+    if (!doctor || !date) { grid.innerHTML = "<p class='text-muted small mb-0'>Select a doctor and date to see slots.</p>"; return; }
+    grid.innerHTML = '<div class="spinner-border spinner-border-sm text-primary"></div>';
+    const data = await apiRequest(`/patient/api/slots?doctor_id=${doctor}&date=${date}`);
+    if (data.doctor_unavailable) {
+
+      grid.innerHTML = `
+        <div class="alert alert-danger w-100 mb-0">
+          <i class="bi bi-exclamation-triangle me-1"></i>
+          Doctor is unavailable on selected date
+        </div>
+      `;
+
+      return;
+    }
+    const available = data.slots.filter(s => !s.taken);
+    grid.innerHTML = data.slots.map(s => `
+      <button class="btn btn-sm ${s.taken ? 'btn-light text-muted' : 'btn-outline-primary'} slot-btn"
+        ${s.taken ? 'disabled' : ''} data-time="${s.time}">
+        <i class="bi bi-clock me-1"></i>${s.time}${s.taken ? ' <i class="bi bi-lock-fill small"></i>' : ''}
+      </button>`).join('') +
+      (available.length === 0
+        ? '<p class="text-danger small mt-2 w-100 mb-0"><i class="bi bi-exclamation-circle me-1"></i>All slots are booked for this date.</p>'
+        : `<p class="text-muted small mt-2 w-100 mb-0">${available.length} slot(s) available</p>`);
+    grid.querySelectorAll('.slot-btn:not([disabled])').forEach(btn => {
+      btn.addEventListener('click', () => {
+        grid.querySelectorAll('.slot-btn:not([disabled])').forEach(b => { b.classList.remove('btn-primary'); b.classList.add('btn-outline-primary'); });
+        btn.classList.replace('btn-outline-primary', 'btn-primary');
+        selectedSlot = btn.dataset.time;
+      });
+    });
+  }
+
+  document.getElementById('selDoctor').addEventListener('change', loadSlots);
+  document.getElementById('apptDate').addEventListener('change', loadSlots);
+
+  // Book appointment
+  document.getElementById('confirmBtn').addEventListener('click', async () => {
+    const doctor = document.getElementById('selDoctor').value;
+    const date = document.getElementById('apptDate').value;
+    const reason = document.getElementById('reason').value;
+    const mode = document.getElementById('modeAppt').value;
+    if (!doctor || !date || !selectedSlot) { showToast("Please select a doctor, date, and time slot", "warning"); return; }
+    const btn = document.getElementById('confirmBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Booking…';
+    try {
+      await apiRequest('/patient/api/appointments', {
+        method: 'POST',
+        body: JSON.stringify({ doct_id: doctor, appointment_date: date, appointment_time: selectedSlot, reason, mode_of_appointment: mode })
+      });
+      showToast("Appointment booked successfully!", "success");
+      document.getElementById('selDept').value = "";
+      document.getElementById('selDoctor').innerHTML = '<option value="">Select a department first</option>';
+      document.getElementById('selDoctor').disabled = true;
+      dateInput.value = minDate;
+      document.getElementById('slotGrid').innerHTML = "<p class='text-muted small mb-0'>Select a doctor and date to see slots.</p>";
+      document.getElementById('reason').value = "";
+      selectedSlot = null;
+      bootstrap.Modal.getInstance(document.getElementById('bookModal'))?.hide();
+      setTimeout(() => { document.querySelectorAll('.modal-backdrop').forEach(el => el.remove()); document.body.classList.remove('modal-open'); document.body.style = ''; }, 200);
+      loadAppts();
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-calendar-check me-1"></i> Confirm Booking';
+    }
+  });
+
+  // Load appointments
+  async function loadAppts() {
+    const container = document.getElementById('apptContainer');
+    container.innerHTML = '<div class="text-center py-4"><div class="spinner-border spinner-border-sm text-primary"></div></div>';
+    try {
+      const data = await apiRequest(`/patient/api/appointments?tab=${aTab}`);
+      updateKpis(data);
+      if (!data || data.length === 0) {
+        const icons = { All: 'bi-calendar2', Upcoming: 'bi-calendar2-x', Past: 'bi-clock-history', Cancelled: 'bi-x-circle' };
+        const msgs = { All: 'You have no appointments yet. Book your first one!', Upcoming: 'No upcoming appointments.', Past: 'No past appointments found.', Cancelled: 'No cancelled appointments.' };
+        container.innerHTML = `<div class="text-center py-5 text-muted">
+          <i class="bi ${icons[aTab]||'bi-calendar2'} fs-2 mb-2 d-block"></i><p>${msgs[aTab]||'No appointments found.'}</p>
+          ${(aTab==='All'||aTab==='Upcoming') ? '<button class="btn btn-sm btn-hms-primary" data-bs-toggle="modal" data-bs-target="#bookModal"><i class="bi bi-plus-lg me-1"></i>Book Appointment</button>' : ''}</div>`;
+        return;
+      }
+      container.innerHTML = data.map(a => {
+        const s = (a.status||'').toLowerCase();
+        const bc = s==='scheduled'?'bg-primary':s==='completed'?'bg-success':s==='cancelled'?'bg-danger':s==='checked-in'?'bg-info':s==='no-show'?'bg-warning text-dark':'bg-secondary';
+        const canCancel = s === 'scheduled';
+        const fd = a.date ? new Date(a.date+'T00:00:00').toLocaleDateString('en-IN',{weekday:'short',day:'numeric',month:'short',year:'numeric'}) : '—';
+        const dayNum = a.date ? new Date(a.date+'T00:00:00').getDate() : '—';
+        const monStr = a.date ? new Date(a.date+'T00:00:00').toLocaleDateString('en-IN',{month:'short'}) : '';
+        return `<div class="border-bottom p-3 d-flex align-items-start gap-3">
+          <div class="text-center" style="min-width:48px;">
+            <div class="fw-bold fs-5" style="color:var(--hms-primary);">${dayNum}</div>
+            <div class="text-muted small">${monStr}</div>
+          </div>
+          <div class="flex-grow-1">
+            <div class="fw-semibold">${a.reason||'General Consultation'}</div>
+            <div class="text-muted small mt-1"><i class="bi bi-person-badge me-1"></i>${a.doctor||'—'}</div>
+            <div class="text-muted small"><i class="bi bi-calendar3 me-1"></i>${fd}</div>
+          </div>
+          <div class="d-flex flex-column align-items-end gap-2">
+            <span class="badge ${bc}" style="font-size:.75rem;">${a.status||'—'}</span>
+            ${canCancel?`<button class="btn btn-sm btn-outline-danger cancel-btn" data-id="${a.appointment_id}" data-doctor="${a.doctor}" data-date="${fd}" data-reason="${a.reason||'General Consultation'}"><i class="bi bi-x-lg me-1"></i>Cancel</button>`:''}
+          </div>
+        </div>`;
+      }).join('');
+      container.querySelectorAll('.cancel-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          cancelApptId = btn.dataset.id;
+          document.getElementById('cancelDoctorName').textContent = btn.dataset.doctor;
+          document.getElementById('cancelDateTime').textContent = btn.dataset.date;
+          document.getElementById('cancelReason').textContent = btn.dataset.reason;
+          new bootstrap.Modal(document.getElementById('cancelModal')).show();
+        });
+      });
+    } catch(e) {
+      container.innerHTML = '<div class="text-center py-5 text-danger"><i class="bi bi-exclamation-triangle fs-3 d-block mb-2"></i>Failed to load appointments.</div>';
+    }
+  }
+
+  // Update KPI cards
+  function updateKpis(data) {
+    document.getElementById('kpiAll').textContent = data.length;
+    document.getElementById('kpiUpcoming').textContent = data.filter(a=>(a.status||'').toLowerCase()==='scheduled').length;
+    document.getElementById('kpiCompleted').textContent = data.filter(a=>(a.status||'').toLowerCase()==='completed').length;
+    document.getElementById('kpiCancelled').textContent = data.filter(a=>(a.status||'').toLowerCase()==='cancelled').length;
+  }
+
+  // Confirm cancel
+  document.getElementById('confirmCancelBtn').addEventListener('click', async () => {
+    if (!cancelApptId) return;
+    const btn = document.getElementById('confirmCancelBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> Cancelling…';
+    try {
+      await apiRequest(`/patient/api/appointments/${cancelApptId}/cancel`, { method: 'PATCH' });
+      bootstrap.Modal.getInstance(document.getElementById('cancelModal'))?.hide();
+      showToast("Appointment cancelled successfully.", "success");
+      loadAppts();
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-x-circle me-1"></i> Yes, Cancel It';
+    }
+  });
+
+  // Tab switching
+  document.querySelectorAll('#tabGroup button').forEach(btn => {
+    btn.addEventListener('click', function() {
+      document.querySelectorAll('#tabGroup button').forEach(b => { b.classList.remove('btn-hms-primary'); b.classList.add('btn-outline-secondary'); });
+      this.classList.replace('btn-outline-secondary','btn-hms-primary');
+      aTab = this.dataset.tab;
+      loadAppts();
+    });
+  });
+
+  loadDepts();
+  loadAppts();
+</script>
+{% endblock %}
