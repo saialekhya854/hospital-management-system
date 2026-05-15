@@ -584,7 +584,8 @@ LifeCare Hospitals
 
         return jsonify({
             "ok": True,
-            "user_id": user.User_ID
+            "user_id": user.User_ID,
+            "password": temp_password
         })
 
 
