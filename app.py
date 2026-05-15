@@ -70,7 +70,8 @@ def create_app():
                 body=body
             )
 
-            mail.send(msg)
+            # mail.send(msg)
+            print("EMAIL DISABLED ON RENDER")
 
         except Exception as e:
             print("MAIL ERROR:", e)
