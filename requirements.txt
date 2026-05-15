@@ -41,7 +41,6 @@ Flask-SQLAlchemy==3.1.1
 fonttools==4.61.1
 fqdn==1.5.1
 future==1.0.0
-great==0.2.0
 greenlet==3.3.1
 gunicorn==26.0.0
 h11==0.16.0
