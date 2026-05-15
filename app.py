@@ -55,21 +55,25 @@ def create_app():
     # ───── GLOBAL MAIL FUNCTION ─────
     def send_email(subject, recipients, body):
 
-        if not recipients:
-            return
+        try:
+            if not recipients:
+                return
 
-        recipients = [r for r in recipients if r]
+            recipients = [r for r in recipients if r]
 
-        if not recipients:
-            return
+            if not recipients:
+                return
 
-        msg = Message(
-            subject=subject,
-            recipients=recipients,
-            body=body
-        )
+            msg = Message(
+                subject=subject,
+                recipients=recipients,
+                body=body
+            )
 
-        mail.send(msg)
+            mail.send(msg)
+
+        except Exception as e:
+            print("MAIL ERROR:", e)
 
     app.send_email = send_email
 
