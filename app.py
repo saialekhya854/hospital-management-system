@@ -8,6 +8,8 @@ from flask_mail import Message
 from flask_migrate import Migrate
 from apscheduler.schedulers.background import BackgroundScheduler
 import atexit
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 import os
 import config
 from config import mail
