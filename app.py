@@ -8,10 +8,9 @@ from flask_migrate import Migrate
 from apscheduler.schedulers.background import BackgroundScheduler
 import atexit
 from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
+from sendgrid.helpers.mail import Mail as SGMail
 import os
 import config
-from config import mail
 
 # IMPORTANT
 from database import db
@@ -51,7 +50,6 @@ def create_app():
     migrate = Migrate(app, db)
 
     # init flask mail
-    mail.init_app(app)
 
     # ───── GLOBAL MAIL FUNCTION ─────
     def send_email(subject, recipients, body):
@@ -65,7 +63,7 @@ def create_app():
             if not recipients:
                 return
 
-            message = Mail(
+            message = SGMail(
                 from_email=os.getenv("MAIL_DEFAULT_SENDER"),
                 to_emails=recipients,
                 subject=subject,
