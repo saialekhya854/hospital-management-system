@@ -3,8 +3,7 @@ HMS — Hospital Management System
 Flask application entry point
 """
 
-from flask import Flask, session, redirect
-from flask_mail import Message
+from flask import Flask, app, session, redirect
 from flask_migrate import Migrate
 from apscheduler.schedulers.background import BackgroundScheduler
 import atexit
@@ -66,17 +65,21 @@ def create_app():
             if not recipients:
                 return
 
-            msg = Message(
+            message = Mail(
+                from_email=os.getenv("MAIL_DEFAULT_SENDER"),
+                to_emails=recipients,
                 subject=subject,
-                recipients=recipients,
-                body=body
+                plain_text_content=body
             )
 
-            # mail.send(msg)
-            print("EMAIL DISABLED ON RENDER")
+            sg = SendGridAPIClient(os.getenv("SENDGRID_API_KEY"))
+
+            response = sg.send(message)
+
+            print("EMAIL SENT:", response.status_code)
 
         except Exception as e:
-            print("MAIL ERROR:", e)
+            print("MAIL ERROR:", str(e))
 
     app.send_email = send_email
 
