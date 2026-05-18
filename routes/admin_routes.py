@@ -988,14 +988,21 @@ def api_doctor_delete(did):
             }), 400
 
         # ✅ Safe to delete
+        # Delete doctor first
+        db.delete(doc)
+
+        # Flush immediately so FK is cleared
+        db.flush()
+
+        # Then delete linked user
         if doc.User_ID:
             user = db.query(User)\
-                     .filter(User.User_ID == doc.User_ID)\
-                     .first()
+                    .filter(User.User_ID == doc.User_ID)\
+                    .first()
+
             if user:
                 db.delete(user)
 
-        db.delete(doc)
         db.commit()
 
         return jsonify({
