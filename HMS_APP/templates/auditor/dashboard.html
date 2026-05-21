@@ -1,0 +1,585 @@
+{% extends "common/base.html" %}
+{% block title %}Auditor Dashboard{% endblock %}
+{% block page_heading %}Auditor Dashboard{% endblock %}
+
+{% block sidebar_nav %}
+<span class="nav-label">Overview</span>
+<a href="/auditor/dashboard" class="nav-link active"><i class="bi bi-speedometer2"></i> Dashboard</a>
+<span class="nav-label">Read-Only Views</span>
+<a href="/auditor/appointments" class="nav-link"><i class="bi bi-calendar2-check"></i> Appointments</a>
+<a href="/auditor/patients" class="nav-link"><i class="bi bi-person-lines-fill"></i> Patients</a>
+<a href="/auditor/doctors" class="nav-link"><i class="bi bi-person-badge-fill"></i> Doctors</a>
+<a href="/auditor/billing" class="nav-link"><i class="bi bi-receipt"></i> Billing</a>
+<a href="/auditor/export"         class="nav-link"><i class="bi bi-download"></i> Export</a>
+<span class="nav-label">Compliance</span>
+<a href="/auditor/audit-logs" class="nav-link"><i class="bi bi-journal-text"></i> Audit Logs</a>
+<span class="nav-label">Account</span>
+<a href="/logout" class="nav-link text-danger"><i class="bi bi-box-arrow-right"></i> Logout</a>
+{% endblock %}
+
+{% block content %}
+
+<!-- ── KPI Cards ──────────────────────────────────────────────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-xl col-md-4 col-sm-6">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#ccfbf1;color:#0d9488;"><i class="bi bi-people-fill"></i></div>
+      <div>
+        <div class="stat-label">Total Patients</div>
+        <div class="stat-value" id="kpiPatients">—</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl col-md-4 col-sm-6">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#ede9fe;color:#7c3aed;"><i class="bi bi-person-badge-fill"></i></div>
+      <div>
+        <div class="stat-label">Total Doctors</div>
+        <div class="stat-value" id="kpiDoctors">—</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl col-md-4 col-sm-6">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#e0e7ff;color:#3730a3;">
+        <i class="bi bi-calendar-check"></i>
+      </div>
+      <div>
+        <div class="stat-label">Total Appointments</div>
+        <div class="stat-value" id="kpiTotalAppts">—</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl col-md-4 col-sm-6">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fef3c7;color:#b45309;">
+        <i class="bi bi-calendar3"></i>
+      </div>
+      <div>
+        <div class="stat-label">Monthly Appointments</div>
+        <div class="stat-value" id="kpiMonthlyAppts">—</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl col-md-4 col-sm-6">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#dbeafe;color:#2563eb;"><i class="bi bi-calendar2-check"></i></div>
+      <div>
+        <div class="stat-label">Appointments Today</div>
+        <div class="stat-value" id="kpiAppts">—</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl col-md-4 col-sm-6">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#d1fae5;color:#16a34a;"><i class="bi bi-currency-rupee"></i></div>
+      <div>
+        <div class="stat-label">Monthly Revenue</div>
+        <div class="stat-value" id="kpiRevenue">—</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl col-md-4 col-sm-6">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fef3c7;color:#b45309;">
+        <i class="bi bi-cash-stack"></i>
+      </div>
+      <div>
+        <div class="stat-label">Total Revenue</div>
+        <div class="stat-value" id="kpiTotalRevenue">—</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-xl col-md-4 col-sm-6">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fef9c3;color:#ca8a04;"><i class="bi bi-hourglass-split"></i></div>
+      <div>
+        <div class="stat-label">Pending Bills</div>
+        <div class="stat-value" id="kpiPendingBills">—</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Row 1: Appointments Over Time + Peak Booking Days ─────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-8">
+    <div class="hms-card h-100">
+      <div class="card-header">
+        <i class="bi bi-graph-up-arrow text-primary"></i>
+        <h6>Appointments Over Time <small class="text-muted fw-normal">(Last 30 Days)</small></h6>
+      </div>
+      <div class="card-body" style="height:280px;">
+        <canvas id="chartApptsOverTime"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="hms-card h-100">
+      <div class="card-header">
+        <i class="bi bi-bar-chart-steps text-warning"></i>
+        <h6>Peak Booking Days of the Week</h6>
+      </div>
+      <div class="card-body" style="height:280px;">
+        <canvas id="chartPeakDays"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Row 2: Appointment Status + Doctor Performance ────────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-4">
+    <div class="hms-card h-100">
+      <div class="card-header">
+        <i class="bi bi-pie-chart-fill text-success"></i>
+        <h6>Appointment Status Breakdown</h6>
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center" style="height:280px;">
+        <canvas id="chartApptStatus"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="hms-card h-100">
+      <div class="card-header">
+        <i class="bi bi-award-fill text-info"></i>
+        <h6>Doctor Performance <small class="text-muted fw-normal">(Top 10 by Appointments)</small></h6>
+      </div>
+      <div class="card-body" style="height:280px;">
+        <canvas id="chartDoctorPerf"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Row 3: Top Diagnoses + Age Distribution ───────────────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-6">
+    <div class="hms-card h-100">
+      <div class="card-header">
+        <i class="bi bi-clipboard2-pulse-fill text-danger"></i>
+        <h6>Top 10 Diagnoses</h6>
+      </div>
+      <div class="card-body" style="height:300px;">
+        <canvas id="chartTopDiagnoses"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="hms-card h-100">
+      <div class="card-header">
+        <i class="bi bi-person-vcard-fill text-secondary"></i>
+        <h6>Patient Age Distribution</h6>
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center" style="height:300px;">
+        <canvas id="chartAgeDistrib"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Row 4: Daily Revenue (7 days) + Payment Mode ─────────────────────── -->
+ <!-- ── Row 4: New Registrations per Month ────────────────────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-7">
+    <div class="hms-card">
+      <div class="card-header">
+        <i class="bi bi-person-plus-fill text-teal"></i>
+        <h6>New Patient Registrations per Month <small class="text-muted fw-normal">(Last 12 Months)</small></h6>
+      </div>
+      <div class="card-body" style="height:280px;">
+        <canvas id="chartRegistrations"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="hms-card h-100">
+      <div class="card-header">
+        <i class="bi bi-credit-card-2-front-fill text-primary"></i>
+        <h6>Payment Mode Distribution</h6>
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center" style="height:280px;">
+        <canvas id="chartPaymentMode"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Row 5: Revenue by Department + Blood Groups ───────────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-7">
+    <div class="hms-card h-100">
+      <div class="card-header">
+        <i class="bi bi-building-fill text-warning"></i>
+        <h6>Revenue by Department</h6>
+      </div>
+      <div class="card-body" style="height:300px;">
+        <canvas id="chartRevByDept"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="hms-card h-100">
+      <div class="card-header">
+        <i class="bi bi-droplet-fill text-danger"></i>
+        <h6>Blood Group Distribution</h6>
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center" style="height:300px;">
+        <canvas id="chartBloodGroups"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- ── Row 7: Gender Distribution + Doctors by Specialization ────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-5">
+    <div class="hms-card h-100">
+      <div class="card-header">
+        <i class="bi bi-gender-ambiguous text-pink" style="color:#db2777;"></i>
+        <h6>Patient Gender Distribution</h6>
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center" style="height:280px;">
+        <canvas id="chartGenderDist"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="hms-card h-100">
+      <div class="card-header">
+        <i class="bi bi-stethoscope text-info" style="color:#0891b2;"></i>
+        <h6>Doctors by Specialization</h6>
+      </div>
+      <div class="card-body" style="height:280px;">
+        <canvas id="chartDoctorSpec"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Row 8: Billed vs Paid + Doctor Experience ─────────────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-7">
+    <div class="hms-card h-100">
+      <div class="card-header">
+        <i class="bi bi-bar-chart-line-fill text-warning"></i>
+        <h6>Billed vs Paid Amount <small class="text-muted fw-normal">(Last 6 Months)</small></h6>
+      </div>
+      <div class="card-body" style="height:300px;">
+        <canvas id="chartBilledVsPaid"></canvas>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-5">
+    <div class="hms-card h-100">
+      <div class="card-header">
+        <i class="bi bi-mortarboard-fill text-secondary"></i>
+        <h6>Doctor Experience Distribution</h6>
+      </div>
+      <div class="card-body" style="height:300px;">
+        <canvas id="chartDoctorExp"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+  (function () {
+
+    /* ─── Palette ─────────────────────────────────────── */
+    const TEAL = '#0d9488';
+    const TEAL_BG = 'rgba(13,148,136,0.15)';
+    const COLORS = [
+      '#0d9488', '#2563eb', '#7c3aed', '#db2777', '#ea580c',
+      '#ca8a04', '#16a34a', '#0891b2', '#9333ea', '#e11d48'
+    ];
+
+    function fmtINR(v) {
+      return '₹' + Number(v).toLocaleString('en-IN', { maximumFractionDigits: 0 });
+    }
+
+    /* ─── Generic chart builders ─────────────────────── */
+    function lineChart(id, labels, data, label) {
+      const ctx = document.getElementById(id).getContext('2d');
+      return new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label,
+            data,
+            borderColor: TEAL,
+            backgroundColor: TEAL_BG,
+            borderWidth: 2,
+            pointRadius: 3,
+            fill: true,
+            tension: 0.3
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { ticks: { maxTicksLimit: 10, font: { size: 11 } } },
+            y: { beginAtZero: true, ticks: { font: { size: 11 } } }
+          }
+        }
+      });
+    }
+
+    function barChart(id, labels, data, label, color, horizontal = false) {
+      const ctx = document.getElementById(id).getContext('2d');
+      return new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels,
+          datasets: [{
+            label,
+            data,
+            backgroundColor: Array.isArray(color) ? color : labels.map((_, i) => COLORS[i % COLORS.length]),
+            borderRadius: 5,
+            borderSkipped: false
+          }]
+        },
+        options: {
+          indexAxis: horizontal ? 'y' : 'x',
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            x: { beginAtZero: true, ticks: { font: { size: 11 } } },
+            y: { ticks: { font: { size: 11 } } }
+          }
+        }
+      });
+    }
+
+    function doughnutChart(id, labels, data) {
+      const ctx = document.getElementById(id).getContext('2d');
+      return new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels,
+          datasets: [{
+            data,
+            backgroundColor: COLORS.slice(0, labels.length),
+            borderWidth: 2,
+            hoverOffset: 6
+          }]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'bottom', labels: { font: { size: 11 }, boxWidth: 12 } }
+          }
+        }
+      });
+    }
+
+    function polarChart(id, labels, data) {
+      const ctx = document.getElementById(id).getContext('2d');
+      return new Chart(ctx, {
+        type: 'pie',   // ✅ changed here
+        data: {
+          labels,
+          datasets: [{
+            data,
+            backgroundColor: COLORS.slice(0, labels.length)
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: {
+                font: { size: 11 },
+                boxWidth: 12
+              }
+            }
+          }
+        }
+      });
+    }
+
+    /* ─── Load all data ───────────────────────────────── */
+    async function fetchJSON(url) {
+      const r = await fetch(url);
+      return r.json();
+    }
+
+    async function loadKPIs() {
+      const d = await fetchJSON('/auditor/api/kpis');
+      document.getElementById('kpiPatients').textContent = d.total_patients.toLocaleString();
+      document.getElementById('kpiAppts').textContent = d.appts_today.toLocaleString();
+      document.getElementById('kpiTotalAppts').textContent =
+        (d.total_appointments ?? 0).toLocaleString();
+
+      document.getElementById('kpiMonthlyAppts').textContent =
+        (d.monthly_appointments ?? 0).toLocaleString();
+      document.getElementById('kpiRevenue').textContent = fmtINR(d.month_revenue);
+      document.getElementById('kpiTotalRevenue').textContent =
+        fmtINR(d.total_revenue ?? 0);
+      document.getElementById('kpiDoctors').textContent = d.total_doctors.toLocaleString();
+      document.getElementById('kpiPendingBills').textContent = d.pending_bills.toLocaleString();
+    }
+
+    async function loadCharts() {
+      const [
+        apptsTime, peakDays, apptStatus,
+        doctorPerf, topDx, ageDist,
+        payMode, revDept,
+        bloodGrp, regMonth,
+        genderDist, doctorSpec, billedVsPaid, doctorExp
+      ] = await Promise.all([
+        fetchJSON('/auditor/api/appointments-over-time'),
+        fetchJSON('/auditor/api/peak-booking-days'),
+        fetchJSON('/auditor/api/appointment-status'),
+        fetchJSON('/auditor/api/doctor-performance'),
+        fetchJSON('/auditor/api/top-diagnoses'),
+        fetchJSON('/auditor/api/age-distribution'),
+        fetchJSON('/auditor/api/payment-mode'),
+        fetchJSON('/auditor/api/revenue-by-department'),
+        fetchJSON('/auditor/api/blood-groups'),
+        fetchJSON('/auditor/api/registrations-per-month'),
+        fetchJSON('/auditor/api/gender-distribution'),
+        fetchJSON('/auditor/api/doctors-by-specialization'),
+        fetchJSON('/auditor/api/billed-vs-paid'),
+        fetchJSON('/auditor/api/doctor-experience'),
+      ]);
+
+      lineChart('chartApptsOverTime', apptsTime.labels, apptsTime.values, 'Appointments');
+      barChart('chartPeakDays', peakDays.labels, peakDays.values, 'Appointments');
+      doughnutChart('chartApptStatus', apptStatus.labels, apptStatus.values);
+      barChart('chartDoctorPerf', doctorPerf.labels, doctorPerf.values, 'Appointments', null, true);
+      barChart('chartTopDiagnoses', topDx.labels, topDx.values, 'Cases', null, true);
+      polarChart('chartAgeDistrib', ageDist.labels, ageDist.values);
+
+      /* Daily Revenue with currency tooltip */
+      
+
+      doughnutChart('chartPaymentMode', payMode.labels, payMode.values);
+
+      /* Revenue by Department horizontal bar */
+      const rdCtx = document.getElementById('chartRevByDept').getContext('2d');
+      new Chart(rdCtx, {
+        type: 'bar',
+        data: {
+          labels: revDept.labels,
+          datasets: [{
+            label: 'Revenue (₹)',
+            data: revDept.values,
+            backgroundColor: COLORS.map(c => c + 'cc'),
+            borderRadius: 5
+          }]
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true, maintainAspectRatio: false,
+          layout: {
+            padding: {
+              left: 30
+            }
+          },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: { label: ctx => fmtINR(ctx.parsed.x) }
+            }
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              ticks: {
+                callback: v => fmtINR(v),
+                font: { size: 11 }
+              }
+            },
+            y: {
+              ticks: {
+                autoSkip: false,   // 🔥 VERY IMPORTANT
+                font: { size: 11 }
+              }
+            }
+          }
+        }
+      });
+
+      barChart('chartBloodGroups', bloodGrp.labels, bloodGrp.values, 'Patients');
+
+      /* Registrations per Month as line */
+      lineChart('chartRegistrations', regMonth.labels, regMonth.values, 'New Patients');
+
+      /* ── NEW CHARTS ─── */
+
+      /* Gender Distribution — doughnut */
+      doughnutChart('chartGenderDist', genderDist.labels, genderDist.values);
+
+      /* Doctors by Specialization — horizontal bar */
+      barChart(
+  'chartDoctorSpec',
+  doctorSpec.labels.map(x => x.length > 18 ? x.slice(0,18) + '...' : x),
+  doctorSpec.values,
+  'Doctors',
+  null,
+  true
+);
+
+      /* Billed vs Paid — grouped bar */
+      const bvpCtx = document.getElementById('chartBilledVsPaid').getContext('2d');
+      new Chart(bvpCtx, {
+        type: 'bar',
+        data: {
+          labels: billedVsPaid.labels,
+          datasets: [
+            {
+              label: 'Billed (₹)',
+              data: billedVsPaid.billed,
+              backgroundColor: 'rgba(37,99,235,0.75)',
+              borderRadius: 4
+            },
+            {
+              label: 'Paid (₹)',
+              data: billedVsPaid.paid,
+              backgroundColor: 'rgba(13,148,136,0.75)',
+              borderRadius: 4
+            }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: {
+            legend: { position: 'top', labels: { font: { size: 11 }, boxWidth: 12 } },
+            tooltip: { callbacks: { label: ctx => ctx.dataset.label + ': ' + fmtINR(ctx.parsed.y) } }
+          },
+          scales: {
+            x: {
+              beginAtZero: true,
+              ticks: {
+                stepSize: 1,
+                font: { size: 11 }
+              }
+            },
+            y: {
+              ticks: { font: { size: 11 } }
+            }
+          }
+        }
+      });
+
+      /* Doctor Experience Distribution — bar */
+      barChart('chartDoctorExp', doctorExp.labels, doctorExp.values, 'Doctors');
+    }
+
+    loadKPIs();
+    loadCharts();
+  })();
+</script>
+{% endblock %}

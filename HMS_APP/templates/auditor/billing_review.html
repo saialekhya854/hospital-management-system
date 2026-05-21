@@ -1,0 +1,277 @@
+{% extends "common/base.html" %}
+{% block title %}Billing Review{% endblock %}
+{% block page_heading %}Billing Review{% endblock %}
+
+{% block sidebar_nav %}
+<span class="nav-label">Auditor</span>
+<a href="/auditor/dashboard"      class="nav-link"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+<a href="/auditor/analysis"       class="nav-link"><i class="bi bi-bar-chart-line-fill"></i> Analysis</a>
+<a href="/auditor/audit-logs"     class="nav-link"><i class="bi bi-journal-text"></i> Audit Logs</a>
+<a href="/auditor/billing-review" class="nav-link active"><i class="bi bi-receipt"></i> Billing Review</a>
+<a href="/auditor/export"         class="nav-link"><i class="bi bi-download"></i> Export</a>
+<span class="nav-label">Account</span>
+<a href="/logout" class="nav-link text-danger"><i class="bi bi-box-arrow-right"></i> Logout</a>
+{% endblock %}
+
+{% block content %}
+
+<!-- Summary KPI row -->
+<div class="row g-3 mb-4" id="billKpiRow">
+  <div class="col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#d1fae5;color:#16a34a;"><i class="bi bi-check-circle-fill"></i></div>
+      <div><div class="stat-label">Paid Bills</div><div class="stat-value" id="kpiPaid">—</div></div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fff3cd;color:#f59e0b;"><i class="bi bi-hourglass-split"></i></div>
+      <div><div class="stat-label">Pending Bills</div><div class="stat-value" id="kpiPending">—</div></div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#e0e7ff;color:#4f46e5;"><i class="bi bi-receipt-cutoff"></i></div>
+      <div><div class="stat-label">Partial Bills</div><div class="stat-value" id="kpiPartial">—</div></div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fee2e2;color:#dc2626;"><i class="bi bi-x-circle-fill"></i></div>
+      <div><div class="stat-label">Cancelled Bills</div><div class="stat-value" id="kpiCancelled">—</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- Filters -->
+<div class="filter-bar flex-wrap">
+  <input type="text" id="searchFilter" class="form-control form-control-sm" style="max-width:220px;" placeholder="Patient name or Bill #…"/>
+  <select id="statusFilter" class="form-select form-select-sm" style="max-width:140px;">
+    <option value="">All Status</option>
+    <option>Paid</option>
+    <option>Pending</option>
+    <option>Partial</option>
+    <option>Cancelled</option>
+  </select>
+  <input type="date" id="dateFrom" class="form-control form-control-sm" style="max-width:150px;"/>
+  <input type="date" id="dateTo"   class="form-control form-control-sm" style="max-width:150px;"/>
+  <button class="btn btn-sm btn-hms-primary" id="applyBtn">
+    <i class="bi bi-funnel-fill me-1"></i> Apply
+  </button>
+  <button class="btn btn-sm btn-outline-secondary" id="clearBtn">Clear</button>
+</div>
+
+<div class="hms-card">
+  <div class="card-header">
+    <i class="bi bi-receipt text-primary"></i>
+    <h6>All Bills — Read-only View</h6>
+    <span class="ms-auto badge bg-secondary" id="totalCount">—</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table hms-table mb-0">
+        <thead><tr>
+          <th>Bill #</th>
+          <th>Patient</th>
+          <th>Type</th>
+          <th>Total</th>
+          <th>Paid</th>
+          <th>Balance</th>
+          <th>Status</th>
+          <th>Created</th>
+          <th></th>
+        </tr></thead>
+        <tbody id="billBody">
+          <tr><td colspan="9" class="text-center py-4">
+            <div class="spinner-border spinner-border-sm text-primary"></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="d-flex justify-content-end p-3" id="billPagination"></div>
+  </div>
+</div>
+
+<!-- Bill Detail Modal -->
+<div class="modal fade" id="billModal" tabindex="-1">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header" style="background:var(--hms-primary-l);">
+        <h5 class="modal-title"><i class="bi bi-receipt me-2 text-primary"></i>Bill Detail</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="billModalBody">
+        <div class="text-center py-4"><div class="spinner-border text-primary"></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function(){
+
+const STATUS_BADGES = {
+  'Paid'      : 'bg-success',
+  'Pending'   : 'bg-warning text-dark',
+  'Partial'   : 'bg-info text-dark',
+  'Cancelled' : 'bg-danger',
+};
+
+// ── Bill Status KPIs ───────────────────────────────────────────────
+async function loadBillKPIs() {
+  try {
+    const data = await apiRequest('/auditor/api/analysis/bill-status');
+    const map  = {};
+    data.forEach(d => { map[d.status] = d; });
+
+    document.getElementById('kpiPaid').textContent      = (map['Paid']?.count      || 0).toLocaleString();
+    document.getElementById('kpiPending').textContent   = (map['Pending']?.count   || 0).toLocaleString();
+    document.getElementById('kpiPartial').textContent   = (map['Partial']?.count   || 0).toLocaleString();
+    document.getElementById('kpiCancelled').textContent = (map['Cancelled']?.count || 0).toLocaleString();
+  } catch(e) {}
+}
+
+// ── Bill List ──────────────────────────────────────────────────────
+async function loadBills(page = 1) {
+  const search = document.getElementById('searchFilter').value;
+  const status = document.getElementById('statusFilter').value;
+  const from   = document.getElementById('dateFrom').value;
+  const to     = document.getElementById('dateTo').value;
+  const params = new URLSearchParams({page, search, status, date_from: from, date_to: to});
+
+  const tbody = document.getElementById('billBody');
+  tbody.innerHTML = `<tr><td colspan="9" class="text-center py-3">
+    <div class="spinner-border spinner-border-sm text-primary"></div></td></tr>`;
+
+  try {
+    const data = await apiRequest(`/auditor/api/billing-review?${params.toString()}`);
+    document.getElementById('totalCount').textContent = `${data.total ?? 0} bills`;
+
+    if (!data.items?.length) {
+      tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">No bills found.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = data.items.map(b => `
+      <tr>
+        <td><strong>#${b.bill_id}</strong></td>
+        <td>${b.patient_name}</td>
+        <td><span class="badge bg-secondary bg-opacity-10 text-secondary">${b.bill_type}</span></td>
+        <td class="fw-bold">₹${b.total_amount.toLocaleString('en-IN')}</td>
+        <td class="text-success fw-bold">₹${b.amount_paid.toLocaleString('en-IN')}</td>
+        <td class="${b.balance > 0 ? 'text-danger' : 'text-success'} fw-bold">₹${b.balance.toLocaleString('en-IN')}</td>
+        <td><span class="badge ${STATUS_BADGES[b.status] || 'bg-secondary'}">${b.status}</span></td>
+        <td style="font-size:.82rem;color:#666;">${b.created_at}</td>
+        <td>
+          <button class="btn btn-sm btn-outline-primary py-0 px-2"
+                  onclick="viewBill(${b.bill_id})">
+            <i class="bi bi-eye"></i>
+          </button>
+        </td>
+      </tr>
+    `).join('');
+
+    renderPagination('billPagination', page, data.total_pages, loadBills);
+  } catch(e) { console.error(e); }
+}
+
+// ── View Bill Detail ───────────────────────────────────────────────
+window.viewBill = async function(bid) {
+  const body = document.getElementById('billModalBody');
+  body.innerHTML = '<div class="text-center py-4"><div class="spinner-border text-primary"></div></div>';
+  new bootstrap.Modal(document.getElementById('billModal')).show();
+
+  try {
+    const b = await apiRequest(`/auditor/api/billing-review/${bid}`);
+
+    const itemsHtml = b.items.length
+      ? b.items.map(i => `
+          <tr>
+            <td>${i.item_name}</td>
+            <td class="text-center">${i.quantity}</td>
+            <td class="text-end fw-bold">₹${(i.amount * i.quantity).toLocaleString('en-IN')}</td>
+          </tr>`).join('')
+      : '<tr><td colspan="3" class="text-muted text-center">No line items</td></tr>';
+
+    const payHtml = b.payment_history.length
+      ? b.payment_history.map(p => `
+          <tr>
+            <td>${p.paid_at}</td>
+            <td>₹${p.amount.toLocaleString('en-IN')}</td>
+            <td>${p.payment_method}</td>
+            <td style="font-size:.8rem;">${p.transaction_id}</td>
+            <td><span class="badge ${p.status === 'Success' ? 'bg-success' : 'bg-warning text-dark'}">${p.status}</span></td>
+          </tr>`).join('')
+      : '<tr><td colspan="5" class="text-muted text-center">No payments recorded</td></tr>';
+
+    const statusBadge = STATUS_BADGES[b.status] || 'bg-secondary';
+
+    body.innerHTML = `
+      <div class="row g-3 mb-3">
+        <div class="col-sm-6">
+          <p class="mb-1 text-muted" style="font-size:.8rem;">PATIENT</p>
+          <p class="fw-bold mb-0">${b.patient_name}</p>
+        </div>
+        <div class="col-sm-6 text-sm-end">
+          <p class="mb-1 text-muted" style="font-size:.8rem;">BILL #${b.bill_id}</p>
+          <span class="badge ${statusBadge} fs-6">${b.status}</span>
+        </div>
+      </div>
+
+      <div class="row g-2 mb-3" style="background:#f0fdf9;border-radius:8px;padding:12px;">
+        <div class="col-4 text-center">
+          <div class="text-muted" style="font-size:.75rem;">TOTAL BILLED</div>
+          <div class="fw-bold fs-5">₹${b.total_amount.toLocaleString('en-IN')}</div>
+        </div>
+        <div class="col-4 text-center">
+          <div class="text-muted" style="font-size:.75rem;">AMOUNT PAID</div>
+          <div class="fw-bold fs-5 text-success">₹${b.amount_paid.toLocaleString('en-IN')}</div>
+        </div>
+        <div class="col-4 text-center">
+          <div class="text-muted" style="font-size:.75rem;">BALANCE</div>
+          <div class="fw-bold fs-5 ${b.balance > 0 ? 'text-danger' : 'text-success'}">₹${b.balance.toLocaleString('en-IN')}</div>
+        </div>
+      </div>
+
+      ${b.description ? `<p class="text-muted mb-3" style="font-size:.88rem;"><i class="bi bi-info-circle me-1"></i>${b.description}</p>` : ''}
+
+      <h6 class="mb-2"><i class="bi bi-list-ul me-1 text-primary"></i>Bill Items</h6>
+      <div class="table-responsive mb-3">
+        <table class="table table-sm hms-table mb-0">
+          <thead><tr><th>Item</th><th class="text-center">Qty</th><th class="text-end">Amount</th></tr></thead>
+          <tbody>${itemsHtml}</tbody>
+        </table>
+      </div>
+
+      <h6 class="mb-2"><i class="bi bi-cash-coin me-1 text-success"></i>Payment History</h6>
+      <div class="table-responsive">
+        <table class="table table-sm hms-table mb-0">
+          <thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Txn ID</th><th>Status</th></tr></thead>
+          <tbody>${payHtml}</tbody>
+        </table>
+      </div>
+
+      <p class="text-muted mt-3 mb-0" style="font-size:.78rem;">
+        <i class="bi bi-clock me-1"></i>Created: ${b.created_at}
+        ${b.notes ? ' &nbsp;|&nbsp; Notes: ' + b.notes : ''}
+      </p>`;
+  } catch(e) {
+    body.innerHTML = '<div class="text-center text-danger py-4">Failed to load bill details.</div>';
+  }
+};
+
+document.getElementById('applyBtn').addEventListener('click', () => loadBills(1));
+document.getElementById('clearBtn').addEventListener('click', () => {
+  ['searchFilter','dateFrom','dateTo'].forEach(id => document.getElementById(id).value = '');
+  document.getElementById('statusFilter').value = '';
+  loadBills(1);
+});
+
+loadBillKPIs();
+loadBills(1);
+
+})();
+</script>
+{% endblock %}

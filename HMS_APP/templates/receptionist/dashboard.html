@@ -1,0 +1,389 @@
+{% extends "common/base.html" %}
+{% block title %}Reception Dashboard{% endblock %}
+{% block page_heading %}Reception Dashboard{% endblock %}
+
+{% block sidebar_nav %}
+<span class="nav-label">Reception</span>
+<a href="/receptionist/dashboard" class="nav-link active"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+<a href="/receptionist/register-patient" class="nav-link"><i class="bi bi-person-plus-fill"></i> Register Patient</a>
+<a href="/receptionist/book-appointment" class="nav-link"><i class="bi bi-calendar-plus"></i> Book Appointment</a>
+<a href="/receptionist/check-in" class="nav-link"><i class="bi bi-check2-circle"></i> Check-In</a>
+<a href="/receptionist/generate-bill" class="nav-link"><i class="bi bi-receipt"></i> Generate Bill</a>
+<!-- <a href="/receptionist/record-payment" class="nav-link"><i class="bi bi-cash-coin"></i> Record Payment</a> -->
+<a href="/receptionist/billing" class="nav-link"><i class="bi bi-file-earmark-medical"></i> Treatment Bills</a>
+<!-- <span class="nav-label">Logs</span> -->
+<!-- <a href="/receptionist/audit-logs" class="nav-link"><i class="bi bi-journal-text"></i> Audit Logs</a>
+  -->
+<a href="/receptionist/messages" class="nav-link">
+    <i class="bi bi-envelope-fill"></i> Messages
+</a>
+<span class="nav-label">Account</span>
+<a href="/logout" class="nav-link text-danger"><i class="bi bi-box-arrow-right"></i> Logout</a>
+{% endblock %}
+
+{% block content %}
+<!-- KPI Stats -->
+<div class="row g-3 mb-4">
+  <div class="col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#ccfbf1;color:#0d9488;"><i class="bi bi-calendar2-check"></i></div>
+      <div>
+        <div class="stat-label">Appts Today</div>
+        <div class="stat-value" id="kpiAppts">—</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#d1fae5;color:#16a34a;"><i class="bi bi-check-circle-fill"></i></div>
+      <div>
+        <div class="stat-label">Checked In</div>
+        <div class="stat-value" id="kpiChecked">—</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fff3cd;color:#f39c12;"><i class="bi bi-hourglass-split"></i></div>
+      <div>
+        <div class="stat-label">Pending Check-In</div>
+        <div class="stat-value" id="kpiPending">—</div>
+      </div>
+    </div>
+  </div>
+  <div class="col-md-3">
+    <a href="/receptionist/billing" class="text-decoration-none">
+      <div class="stat-card" style="cursor:pointer;border:1px solid #fecaca;transition:box-shadow .2s;"
+        onmouseover="this.style.boxShadow='0 4px 14px rgba(225,29,72,.15)'" onmouseout="this.style.boxShadow=''">
+        <div class="stat-icon" style="background:#ffe4e6;color:#e11d48;"><i class="bi bi-file-earmark-medical"></i>
+        </div>
+        <div>
+          <div class="stat-label">Pending Bills</div>
+          <div class="stat-value" id="kpiBills">—</div>
+          <div style="font-size:.72rem;color:#e11d48;margin-top:2px;">Click to collect →</div>
+        </div>
+      </div>
+    </a>
+  </div>
+</div>
+
+<div class="row g-3">
+
+  <!-- Message OUTSIDE -->
+  <div id="noDataMessage" class="text-center py-5 text-muted d-none">
+    <i class="bi bi-calendar-x fs-2 d-block mb-2"></i>
+    No appointments today
+  </div>
+
+  <!-- Table wrapper -->
+  <div class="col-lg-12" id="queueTableWrapper">
+    <div class="hms-card">
+      <div class="card-header">
+        <i class="bi bi-list-ul text-primary"></i>
+        <h6>Today's Appointment Queue</h6>
+        <button class="btn btn-sm btn-outline-secondary ms-auto" id="refreshQueue">
+          <i class="bi bi-arrow-clockwise"></i> Refresh
+        </button>
+      </div>
+      <div class="card-body p-0">
+        <div class="table-responsive">
+          <table class="table hms-table mb-0">
+            <thead>
+              <tr>
+                <th>OPID</th>
+                <th>Patient</th>
+                <th>Doctor</th>
+                <th>Dept</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="queueBody">
+              <tr>
+                <td colspan="6" class="text-center py-4">
+                  <div class="spinner-border spinner-border-sm text-primary"></div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="d-flex justify-content-end p-3" id="queuePagination"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── NEW: Receptionist Charts ─────────────────────────────────────── -->
+  <div class="row g-3 mb-4" id="receptChartsRow">
+    <div class="col-lg-8">
+      <div class="hms-card h-100">
+        <div class="card-header">
+          <i class="bi bi-bar-chart-fill text-primary"></i>
+          <h6>Appointments — Last 7 Days</h6>
+        </div>
+        <div class="card-body">
+          <canvas id="receptApptTrendChart" height="90"></canvas>
+          <p id="receptApptNoData" class="text-muted text-center d-none py-3">No data available</p>
+        </div>
+      </div>
+    </div>
+    <div class="col-lg-4">
+      <div class="hms-card h-100">
+        <div class="card-header">
+          <i class="bi bi-pie-chart-fill text-success"></i>
+          <h6>Status Breakdown — Last 30 Days</h6>
+        </div>
+        <div class="card-body d-flex align-items-center justify-content-center" style="min-height:180px;">
+          <canvas id="receptStatusChart"></canvas>
+          <p id="receptStatusNoData" class="text-muted text-center d-none">No data available</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- <div id="noDataMessage" class="text-center py-5 text-muted d-none">
+  <i class="bi bi-calendar-x fs-2 d-block mb-2"></i>
+  No appointments today
+</div> -->
+
+
+  <!-- Quick Actions -->
+  <!-- <div class="col-lg-4">
+    <div class="hms-card">
+      <div class="card-header">
+        <i class="bi bi-lightning-fill text-warning"></i>
+        <h6>Quick Actions</h6>
+      </div>
+      <div class="card-body d-flex flex-column gap-2 pt-3">
+        <a href="/receptionist/register-patient" class="btn btn-hms-outline w-100 text-start">
+          <i class="bi bi-person-plus-fill me-2 text-primary"></i> Register New Patient
+        </a>
+        <a href="/receptionist/book-appointment" class="btn btn-hms-outline w-100 text-start">
+          <i class="bi bi-calendar-plus me-2 text-success"></i> Book Appointment
+        </a>
+        <a href="/receptionist/generate-bill" class="btn btn-hms-outline w-100 text-start">
+          <i class="bi bi-receipt me-2 text-warning"></i> Generate Bill
+        </a>
+        <a href="/receptionist/record-payment" class="btn btn-hms-outline w-100 text-start">
+          <i class="bi bi-cash-coin me-2 text-info"></i> Record Payment
+        </a>
+        <a href="/receptionist/check-in" class="btn btn-hms-outline w-100 text-start">
+          <i class="bi bi-check2-circle me-2 text-danger"></i> Manual Check-In
+        </a>
+      </div>
+    </div>
+  </div> -->
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+
+  async function loadKPIs() {
+    try {
+      const d = await apiRequest('/receptionist/api/dashboard-stats');
+
+      console.log("KPI DATA:", d);  // 🔥 MUST check this
+
+      document.getElementById('kpiAppts').textContent =
+        (d.appts_today !== null && d.appts_today !== undefined) ? d.appts_today : 0;
+
+      document.getElementById('kpiChecked').textContent =
+        (d.checked_in !== null && d.checked_in !== undefined) ? d.checked_in : 0;
+
+      document.getElementById('kpiPending').textContent =
+        (d.pending_checkin !== null && d.pending_checkin !== undefined) ? d.pending_checkin : 0;
+
+      document.getElementById('kpiBills').textContent =
+        (d.bills_pending !== null && d.bills_pending !== undefined) ? d.bills_pending : 0;
+
+    } catch (err) {
+      console.error("KPI ERROR:", err);
+    }
+  }
+
+  /* ── Receptionist: Appointments per day ─────────────── */
+  async function loadReceptApptTrend() {
+    try {
+      const data = await apiRequest('/receptionist/api/appt-trend');
+      const canvas = document.getElementById('receptApptTrendChart');
+      const noData = document.getElementById('receptApptNoData');
+
+      const hasData = data.values && data.values.some(v => v > 0);
+      if (!hasData) {
+        canvas.classList.add('d-none');
+        noData.classList.remove('d-none');
+        return;
+      }
+
+      new Chart(canvas, {
+        type: 'bar',
+        data: {
+          labels: data.labels,
+          datasets: [{
+            label: 'Appointments',
+            data: data.values,
+            backgroundColor: 'rgba(13,148,136,0.7)',
+            borderRadius: 6,
+            borderWidth: 0
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+      });
+    } catch (err) {
+      console.error('Recept appt trend error:', err);
+    }
+  }
+
+  /* ── Receptionist: Status Distribution (last 30 days) ── */
+  async function loadReceptStatusDist() {
+    try {
+      const data = await apiRequest('/receptionist/api/appt-status-dist');
+      const canvas = document.getElementById('receptStatusChart');
+      const noData = document.getElementById('receptStatusNoData');
+
+      if (!data.labels || data.labels.length === 0) {
+        canvas.classList.add('d-none');
+        noData.classList.remove('d-none');
+        return;
+      }
+
+      // Colour map for known statuses
+      const colourMap = {
+        'Scheduled': '#f59e0b',
+        'Checked-In': '#3b82f6',
+        'In-Progress': '#8b5cf6',
+        'Completed': '#16a34a',
+        'Cancelled': '#ef4444',
+        'No-Show': '#6b7280'
+      };
+      const bgColors = data.labels.map(
+        l => colourMap[l] || '#0d9488'
+      );
+
+      new Chart(canvas, {
+        type: 'doughnut',
+        data: {
+          labels: data.labels,
+          datasets: [{
+            data: data.values,
+            backgroundColor: bgColors,
+            borderColor: '#fff',
+            borderWidth: 2
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          cutout: '60%',
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { font: { size: 10 }, color: '#374151' }
+            }
+          }
+        }
+      });
+    } catch (err) {
+      console.error('Recept status dist error:', err);
+    }
+  }
+
+  /* ── Add these two calls inside the existing DOMContentLoaded block: ─── */
+  // Find: document.addEventListener("DOMContentLoaded", function () {
+  //          loadKPIs();
+  //          loadQueue();
+  //       });
+  // Change it to:
+  document.addEventListener("DOMContentLoaded", function () {
+    loadKPIs();
+    loadQueue();
+    loadReceptApptTrend();   // ADD
+    loadReceptStatusDist();  // ADD
+  });
+
+  async function loadQueue(page = 1) {
+    const body = document.getElementById('queueBody');
+    const tableWrapper = document.getElementById('queueTableWrapper');
+    const noData = document.getElementById('noDataMessage');
+
+    // Show loader
+    body.innerHTML = `
+    <tr>
+      <td colspan="6" class="text-center py-3">
+        <div class="spinner-border spinner-border-sm text-primary"></div>
+      </td>
+    </tr>`;
+
+    try {
+      const data = await apiRequest(`/receptionist/api/today-queue?page=${page}`);
+
+      // NO DATA CASE
+      if (!data.items || data.items.length === 0) {
+        tableWrapper.style.display = "none";   // hide table
+        noData.style.display = "block";        // show message
+        return;
+      }
+      // DATA EXISTS
+      tableWrapper.style.display = "block";
+      noData.style.display = "none";          //  hide message
+
+      body.innerHTML = data.items.map(a => `
+      <tr>
+        <td><span style="font-family:monospace;font-size:.78rem;background:#eff3ff;color:#3b5bdb;border-radius:6px;padding:2px 7px;font-weight:600;">APT-${String(a.appointment_Id).padStart(4, '0')}</span></td>
+        <td>${a.patient_name}</td>
+        <td>${a.doctor_name}</td>
+        <td>${a.dept_name || '—'}</td>
+        <td>${statusBadge(a.appointment_status)}</td>
+        <td>
+          ${(a.appointment_status || '').toLowerCase() === 'scheduled'
+          ? `<a href="/receptionist/check-in" class="btn btn-sm btn-warning">
+       Check-In →
+     </a>`
+
+          : (a.appointment_status || '').toLowerCase() === 'checked-in'
+            ? `<span class="text-primary small">
+       <i class="bi bi-hourglass-split"></i> With Doctor
+     </span>`
+
+            : (a.appointment_status || '').toLowerCase() === 'completed'
+              ? `<a href="/receptionist/billing" class="btn btn-sm btn-success">
+       Bill →
+     </a>`
+
+              : (a.appointment_status || '').toLowerCase() === 'no-show'
+                ? `<span class="badge bg-danger">
+       No-Show
+     </span>`
+
+                : '—'
+        }
+        </td>
+      </tr>
+    `).join('');
+
+    } catch (err) {
+      tableWrapper.classList.add("d-none");
+      noData.classList.remove("d-none");
+      noData.innerHTML = "Failed to load data";
+    }
+  }
+
+
+  async function checkIn(id) {
+    try {
+      await apiRequest(`/receptionist/api/check-in/${id}`, { method: 'POST' });
+      showToast('Patient checked in successfully');
+      loadQueue(qPage);
+      loadKPIs();
+    } catch (_) { }
+  }
+  document.addEventListener("DOMContentLoaded", function () {
+    loadKPIs();
+    loadQueue();
+  });
+</script>
+{% endblock %}

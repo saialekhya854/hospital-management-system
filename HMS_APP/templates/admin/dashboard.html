@@ -1,0 +1,533 @@
+{% extends "common/base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+{% block page_heading %}Admin Dashboard{% endblock %}
+
+{% block sidebar_nav %}
+<span class="nav-label">Main</span>
+<a href="/admin/dashboard" class="nav-link active"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+<a href="/admin/users" class="nav-link"><i class="bi bi-people-fill"></i> Users & Roles</a>
+<a href="/admin/doctors" class="nav-link"><i class="bi bi-person-badge-fill"></i> Doctors</a>
+<a href="/admin/departments" class="nav-link"><i class="bi bi-building"></i> Departments</a>
+<a href="/admin/patients" class="nav-link"><i class="bi bi-person-lines-fill"></i> Patients</a>
+<span class="nav-label">Operations</span>
+<a href="/admin/doctor-leaves" class="nav-link">
+  <i class="bi bi-calendar-x"></i>
+  Leave Approvals
+</a>
+<a href="/admin/appointments" class="nav-link"><i class="bi bi-calendar2-check"></i> Appointments</a>
+<a href="/admin/billing" class="nav-link"><i class="bi bi-credit-card-2-front"></i> Billing</a>
+<a href="/admin/audit-logs" class="nav-link"><i class="bi bi-journal-text"></i> Audit Logs</a>
+{% endblock %}
+
+{% block content %}
+
+
+
+<!-- ── KPI Row ──────────────────────────────────────────────────────── -->
+<div class="row g-3 mb-4" id="kpiRow">
+  <div class="col-xl-3 col-md-6">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#ccfbf1;color:#0d9488;"><i class="bi bi-people-fill"></i></div>
+      <div><div class="stat-label">Total Patients</div><div class="stat-value">
+  <a href="/admin/patients" id="kpiPatients" style="text-decoration:none;">
+    —
+  </a>
+</div></div>
+    </div>
+  </div>
+  <div class="col-xl-3 col-md-6">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#d1fae5;color:#16a34a;"><i class="bi bi-calendar2-check"></i></div>
+      <div><div class="stat-label">Appts Today</div><div class="stat-value">
+  <a href="/admin/appointments" id="kpiAppts" class="kpi-link" style="text-decoration: none;">—</a>
+</div></div>
+    </div>
+  </div>
+  <div class="col-xl-3 col-md-6">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#fff3cd;color:#f59e0b;"><i class="bi bi-receipt"></i></div>
+      <div><div class="stat-label">Pending Bills</div><div class="stat-value">
+  <a href="/admin/billing" id="kpiBills" class="kpi-link" style="text-decoration: none;">—</a>
+</div></div>
+    </div>
+  </div>
+  <div class="col-xl-3 col-md-6">
+    <div class="stat-card">
+      <div class="stat-icon" style="background:#e6faf6;color:#134e4a;"><i class="bi bi-currency-rupee"></i></div>
+      <div><div class="stat-label">Total Revenue</div><div class="stat-value">
+  <a href="/admin/billing" id="kpiRevenue" class="kpi-link" style="text-decoration: none;">—</a>
+</div></div>
+    </div>
+  </div>
+</div>
+<!-- ── Recent Appointments ─────────────────────────────────────────── -->
+
+<div class="hms-card">
+  <div class="card-header d-flex align-items-center">
+    <i class="bi bi-clock-history text-primary"></i>
+    <h6 class="ms-2 mb-0">Recent Appointments</h6>
+    <div class="ms-auto">
+      <button class="btn btn-sm btn-hms-outline" id="refreshBtn">
+        <i class="bi bi-arrow-clockwise me-1"></i>Refresh
+      </button>
+    </div>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table hms-table mb-0">
+        <thead>
+          <tr>
+            <th>Patient</th><th>Doctor</th><th>Dept</th>
+            <th>Date &amp; Time</th><th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="recentApptBody">
+          <tr><td colspan="5" class="text-center py-4">
+            <div class="spinner-border spinner-border-sm text-primary"></div> Loading…
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="d-flex justify-content-end p-3" id="recentPagination"></div>
+  </div>
+</div>
+<!-- ── Row 1: Appointment Status + Patient Age Distribution ─────── -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-5">
+    <div class="hms-card h-100">
+      <div class="card-header">
+        <i class="bi bi-clipboard2-pulse-fill text-primary"></i>
+        <h6>Appointment Status</h6>
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center" style="min-height:260px;">
+        <canvas id="apptStatusChart"></canvas>
+        <p id="apptStatusNoData" class="text-muted text-center d-none">No data available</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="hms-card h-100">
+      <div class="card-header">
+        <i class="bi bi-bar-chart-steps text-info"></i>
+        <h6>Patient Age Distribution</h6>
+      </div>
+      <div class="card-body" style="min-height:260px;">
+        <canvas id="ageDistChart" height="110"></canvas>
+        <p id="ageDistNoData" class="text-muted text-center d-none">No data available</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Row 2: Payment Modes + New Registrations Monthly ──────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-4">
+    <div class="hms-card h-100">
+      <div class="card-header">
+        <i class="bi bi-credit-card-2-front-fill text-success"></i>
+        <h6>Payment Modes</h6>
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center" style="min-height:260px;">
+        <canvas id="paymentModeChart"></canvas>
+        <p id="paymentModeNoData" class="text-muted text-center d-none">No data available</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="hms-card h-100">
+      <div class="card-header">
+        <i class="bi bi-person-plus-fill text-primary"></i>
+        <h6>New Registrations — Monthly (Last 12 Months)</h6>
+      </div>
+      <div class="card-body" style="min-height:260px;">
+        <canvas id="monthlyRegChart" height="100"></canvas>
+        <p id="monthlyRegNoData" class="text-muted text-center d-none">No data available</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Row 3: Patients by Gender + Doctors by Department ──────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-4">
+    <div class="hms-card h-100">
+      <div class="card-header">
+        <i class="bi bi-gender-ambiguous text-warning"></i>
+        <h6>Patients by Gender</h6>
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center" style="min-height:240px;">
+        <canvas id="genderChart"></canvas>
+        <p id="genderNoData" class="text-muted text-center d-none">No data available</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-8">
+    <div class="hms-card h-100">
+      <div class="card-header">
+        <i class="bi bi-hospital-fill text-danger"></i>
+        <h6>Doctors by Department</h6>
+      </div>
+      <div class="card-body" style="min-height:240px;">
+        <canvas id="doctorsByDeptChart" height="100"></canvas>
+        <p id="doctorsByDeptNoData" class="text-muted text-center d-none">No data available</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Row 4: Patients per Doctor + Appts by Slot Time ──────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-6">
+    <div class="hms-card h-100">
+      <div class="card-header">
+        <i class="bi bi-person-badge text-secondary"></i>
+        <h6>Patients per Doctor</h6>
+      </div>
+      <div class="card-body" style="min-height:280px;">
+        <canvas id="patientsPerDoctorChart" height="130"></canvas>
+        <p id="patientsPerDoctorNoData" class="text-muted text-center d-none">No data available</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-6">
+    <div class="hms-card h-100">
+      <div class="card-header">
+        <i class="bi bi-clock-history" style="color:#7c3aed;"></i>
+        <h6>Appointments by Slot Time</h6>
+      </div>
+      <div class="card-body" style="min-height:280px;">
+        <canvas id="slotTimeChart" height="130"></canvas>
+        <p id="slotTimeNoData" class="text-muted text-center d-none">No data available</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── Row 5: Billed vs Paid + Monthly Revenue ───────────────────── -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-5">
+    <div class="hms-card h-100">
+      <div class="card-header">
+        <i class="bi bi-receipt-cutoff" style="color:#f97316;"></i>
+        <h6>Billed vs Paid (Last 6 Months)</h6>
+      </div>
+      <div class="card-body" style="min-height:260px;">
+        <canvas id="billedVsPaidChart" height="110"></canvas>
+        <p id="billedVsPaidNoData" class="text-muted text-center d-none">No data available</p>
+      </div>
+    </div>
+  </div>
+  <div class="col-lg-7">
+    <div class="hms-card h-100">
+      <div class="card-header">
+        <i class="bi bi-graph-up-arrow text-success"></i>
+        <h6>Monthly Revenue (Last 12 Months)</h6>
+      </div>
+      <div class="card-body" style="min-height:260px;">
+        <canvas id="monthlyRevenueChart" height="100"></canvas>
+        <p id="monthlyRevenueNoData" class="text-muted text-center d-none">No data available</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let recentPage = 1;
+
+const PALETTE = [
+  '#0d9488','#16a34a','#f59e0b','#e91e63','#8b5cf6',
+  '#3b82f6','#ef4444','#14b8a6','#f97316','#a855f7',
+  '#06b6d4','#84cc16','#ec4899','#6366f1','#10b981',
+  '#eab308','#f43f5e','#0ea5e9','#22c55e','#7c3aed'
+];
+
+function getColors(n) { return Array.from({length:n}, (_,i) => PALETTE[i % PALETTE.length]); }
+
+/* ── Load KPIs ───────────────────────────────── */
+async function loadKPIs() {
+  try {
+    const data = await apiRequest('/admin/api/kpis');
+    document.getElementById('kpiPatients').textContent = data.total_patients ?? '—';
+    document.getElementById('kpiAppts').textContent    = data.appts_today ?? '—';
+    document.getElementById('kpiBills').textContent    = data.pending_bills ?? '—';
+    const revenue = data.revenue_month ?? 0;
+
+    document.getElementById('kpiRevenue').textContent =
+      '₹' + Number(revenue).toLocaleString('en-IN');
+  } catch (err) { console.error('KPI error:', err); }
+}
+
+/* ── 1. Appointment Status — Polar Area Chart ──────────────────── */
+async function loadApptStatusChart() {
+  try {
+    const data = await apiRequest('/admin/api/admin/appt-status');
+
+    const canvas = document.getElementById('apptStatusChart');
+    const noData = document.getElementById('apptStatusNoData');
+
+    if (!data.labels || !data.labels.length) {
+      canvas.classList.add('d-none');
+      noData.classList.remove('d-none');
+      return;
+    }
+
+    // simple colors
+    const colors = ['#3b82f6', '#16a34a', '#ef4444', '#f59e0b', '#8b5cf6'];
+
+    new Chart(canvas, {
+      type: 'bar',   // ✅ CHANGED HERE
+      data: {
+        labels: data.labels,
+        datasets: [{
+          label: 'Appointments',
+          data: data.values,
+          backgroundColor: colors
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          y: {
+            beginAtZero: true
+          }
+        },
+        plugins: {
+          legend: {
+            display: false   // cleaner for beginners
+          }
+        }
+      }
+    });
+
+  } catch (err) {
+    console.error('Appt status chart error:', err);
+  }
+}
+/* ── 2. Patient Age Distribution — Horizontal Bar ───────────────── */
+async function loadAgeDistChart() {
+  try {
+    const data = await apiRequest('/admin/api/admin/age-distribution');
+    const canvas = document.getElementById('ageDistChart');
+    const noData = document.getElementById('ageDistNoData');
+    if (!data.labels || !data.labels.length) { canvas.classList.add('d-none'); noData.classList.remove('d-none'); return; }
+    new Chart(canvas, {
+      type: 'bar',
+      data: { labels: data.labels, datasets: [{ label: 'Patients', data: data.values, backgroundColor: getColors(data.labels.length), borderRadius: 5 }] },
+      options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+    });
+  } catch (err) { console.error('Age dist chart error:', err); }
+}
+
+/* ── 3. Payment Modes — Doughnut Chart ─────────────────────────── */
+async function loadPaymentModeChart() {
+  try {
+    const data = await apiRequest('/admin/api/admin/payment-modes');
+    const canvas = document.getElementById('paymentModeChart');
+    const noData = document.getElementById('paymentModeNoData');
+    if (!data.labels || !data.labels.length) { canvas.classList.add('d-none'); noData.classList.remove('d-none'); return; }
+    const modeColors = { 'Cash':'#16a34a','Online':'#3b82f6','Card':'#8b5cf6','UPI':'#f59e0b','Insurance':'#e91e63','Cheque':'#14b8a6' };
+    const colors = data.labels.map((l,i) => modeColors[l] || PALETTE[i % PALETTE.length]);
+    new Chart(canvas, {
+      type: 'doughnut',
+      data: { labels: data.labels, datasets: [{ data: data.values, backgroundColor: colors, borderColor: '#fff', borderWidth: 3, hoverOffset: 8 }] },
+      options: { responsive: true, maintainAspectRatio: false, cutout: '60%', plugins: { legend: { position: 'bottom', labels: { font: { size: 11 }, padding: 10, boxWidth: 14 } } } }
+    });
+  } catch (err) { console.error('Payment mode chart error:', err); }
+}
+
+/* ── 4. New Registrations Monthly — Area Line Chart ─────────────── */
+async function loadMonthlyRegChart() {
+  try {
+    const data = await apiRequest('/admin/api/admin/monthly-registrations');
+    const canvas = document.getElementById('monthlyRegChart');
+    const noData = document.getElementById('monthlyRegNoData');
+    const hasData = data.values && data.values.some(v => v > 0);
+    if (!hasData) { canvas.classList.add('d-none'); noData.classList.remove('d-none'); return; }
+    new Chart(canvas, {
+      type: 'line',
+      data: { labels: data.labels, datasets: [{ label: 'New Patients', data: data.values, borderColor: '#0d9488', backgroundColor: 'rgba(13,148,136,0.12)', tension: 0.4, fill: true, pointRadius: 5, pointBackgroundColor: '#0d9488', borderWidth: 2.5 }] },
+      options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+    });
+  } catch (err) { console.error('Monthly reg chart error:', err); }
+}
+
+/* ── 5. Patients by Gender — Pie Chart ─────────────────────────── */
+async function loadGenderChart() {
+  try {
+    const data = await apiRequest('/admin/api/admin/patient-gender');
+    const canvas = document.getElementById('genderChart');
+    const noData = document.getElementById('genderNoData');
+    if (!data.labels || !data.labels.length) { canvas.classList.add('d-none'); noData.classList.remove('d-none'); return; }
+    const gColors = { 'Male':'#3b82f6','Female':'#e91e63','Other':'#8b5cf6','Unknown':'#9ca3af' };
+    const colors = data.labels.map((l,i) => gColors[l] || PALETTE[i % PALETTE.length]);
+    new Chart(canvas, {
+      type: 'pie',
+      data: { labels: data.labels, datasets: [{ data: data.values, backgroundColor: colors, borderColor: '#fff', borderWidth: 3, hoverOffset: 8 }] },
+      options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { font: { size: 12 }, padding: 12, boxWidth: 16 } } } }
+    });
+  } catch (err) { console.error('Gender chart error:', err); }
+}
+
+/* ── 6. Doctors by Department — Vertical Bar ────────────────────── */
+async function loadDoctorsByDeptChart() {
+  try {
+    const data = await apiRequest('/admin/api/admin/doctors-by-dept');
+    const canvas = document.getElementById('doctorsByDeptChart');
+    const noData = document.getElementById('doctorsByDeptNoData');
+    if (!data.labels || !data.labels.length) { canvas.classList.add('d-none'); noData.classList.remove('d-none'); return; }
+    new Chart(canvas, {
+      type: 'bar',
+      data: { labels: data.labels, datasets: [{ label: 'Doctors', data: data.values, backgroundColor: getColors(data.labels.length), borderRadius: 6 }] },
+      options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+    });
+  } catch (err) { console.error('Doctors by dept chart error:', err); }
+}
+
+/* ── 7. Patients per Doctor — Horizontal Bar ────────────────────── */
+async function loadPatientsPerDoctorChart() {
+  try {
+    const data = await apiRequest('/admin/api/admin/patients-per-doctor');
+    const canvas = document.getElementById('patientsPerDoctorChart');
+    const noData = document.getElementById('patientsPerDoctorNoData');
+    if (!data.labels || !data.labels.length) { canvas.classList.add('d-none'); noData.classList.remove('d-none'); return; }
+    new Chart(canvas, {
+      type: 'bar',
+      data: { labels: data.labels, datasets: [{ label: 'Patients', data: data.values, backgroundColor: '#3b82f6', borderRadius: 5 }] },
+      options: { indexAxis: 'y', responsive: true, plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+    });
+  } catch (err) { console.error('Patients per doctor chart error:', err); }
+}
+
+/* ── 8. Appointments by Slot Time — Radar Chart ─────────────────── */
+async function loadSlotTimeChart() {
+  try {
+    const data = await apiRequest('/admin/api/admin/appts-by-slot');
+
+    const canvas = document.getElementById('slotTimeChart');
+    const noData = document.getElementById('slotTimeNoData');
+
+    if (!data.labels || !data.labels.length) {
+      canvas.classList.add('d-none');
+      noData.classList.remove('d-none');
+      return;
+    }
+
+    new Chart(canvas, {
+      type: 'bar',   // ✅ CHANGED HERE
+
+      data: {
+        labels: data.labels,
+        datasets: [{
+          label: 'Appointments',
+          data: data.values,
+          backgroundColor: '#8b5cf6'   // simple single color
+        }]
+      },
+
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+
+        scales: {
+          y: {
+            beginAtZero: true,
+            ticks: {
+              stepSize: 1
+            }
+          }
+        },
+
+        plugins: {
+          legend: {
+            display: false   // cleaner UI
+          }
+        }
+      }
+    });
+
+  } catch (err) {
+    console.error('Slot time chart error:', err);
+  }
+}
+
+/* ── 9. Billed vs Paid — Grouped Bar ───────────────────────────── */
+async function loadBilledVsPaidChart() {
+  try {
+    const data = await apiRequest('/admin/api/admin/billed-vs-paid');
+    const canvas = document.getElementById('billedVsPaidChart');
+    const noData = document.getElementById('billedVsPaidNoData');
+    if (!data.labels || !data.labels.length) { canvas.classList.add('d-none'); noData.classList.remove('d-none'); return; }
+    new Chart(canvas, {
+      type: 'bar',
+      data: {
+        labels: data.labels,
+        datasets: [
+          { label: 'Billed', data: data.billed, backgroundColor: 'rgba(239,68,68,0.75)', borderRadius: 4 },
+          { label: 'Paid',   data: data.paid,   backgroundColor: 'rgba(22,163,74,0.75)',  borderRadius: 4 }
+        ]
+      },
+      options: { responsive: true, plugins: { legend: { position: 'top', labels: { font: { size: 11 } } } }, scales: { y: { beginAtZero: true, ticks: { callback: v => '₹' + Number(v).toLocaleString('en-IN') } } } }
+    });
+  } catch (err) { console.error('Billed vs paid chart error:', err); }
+}
+
+/* ── 10. Monthly Revenue — Smooth Area Line ─────────────────────── */
+async function loadMonthlyRevenueChart() {
+  try {
+    const data = await apiRequest('/admin/api/admin/monthly-revenue');
+    const canvas = document.getElementById('monthlyRevenueChart');
+    const noData = document.getElementById('monthlyRevenueNoData');
+    const hasData = data.values && data.values.some(v => v > 0);
+    if (!hasData) { canvas.classList.add('d-none'); noData.classList.remove('d-none'); return; }
+    new Chart(canvas, {
+      type: 'line',
+      data: { labels: data.labels, datasets: [{ label: 'Revenue (₹)', data: data.values, borderColor: '#16a34a', backgroundColor: 'rgba(22,163,74,0.1)', tension: 0.4, fill: true, pointRadius: 5, pointBackgroundColor: '#16a34a', borderWidth: 2.5 }] },
+      options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { callback: v => '₹' + Number(v).toLocaleString('en-IN') } } } }
+    });
+  } catch (err) { console.error('Monthly revenue chart error:', err); }
+}
+
+/* ── Recent Appointments ───────────────────────────────────────── */
+async function loadRecent(page = 1) {
+  recentPage = page;
+  const body = document.getElementById('recentApptBody');
+  body.innerHTML = `<tr><td colspan="5" class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary"></div></td></tr>`;
+  try {
+    const data = await apiRequest(`/admin/api/admin/appointments/recent?page=${page}`);
+    if (!data.items?.length) { body.innerHTML = `<tr><td colspan="5" class="text-center py-4 text-muted">No appointments found.</td></tr>`; return; }
+    body.innerHTML = data.items.map(a => `
+      <tr>
+        <td>${a.patient_name}</td>
+        <td>${a.doctor_name}</td>
+        <td>${a.dept_name}</td>
+        <td>${a.appointment_date}</td>
+        <td>${statusBadge(a.appointment_status)}</td>
+      </tr>
+    `).join('');
+    renderPagination('recentPagination', page, data.total_pages, loadRecent);
+  } catch (err) { console.error(err); }
+}
+
+document.getElementById('refreshBtn').addEventListener('click', () => { loadKPIs(); loadRecent(1); });
+
+/* ── Init ──────────────────────────────────────────────────────── */
+loadKPIs();
+loadApptStatusChart();
+loadAgeDistChart();
+loadPaymentModeChart();
+loadMonthlyRegChart();
+loadGenderChart();
+loadDoctorsByDeptChart();
+loadPatientsPerDoctorChart();
+loadSlotTimeChart();
+loadBilledVsPaidChart();
+loadMonthlyRevenueChart();
+loadRecent(1);
+</script>
+{% endblock %}

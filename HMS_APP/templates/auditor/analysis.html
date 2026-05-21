@@ -1,0 +1,382 @@
+{% extends "common/base.html" %}
+{% block title %}Analysis{% endblock %}
+{% block page_heading %}Hospital Analysis{% endblock %}
+
+{% block sidebar_nav %}
+<span class="nav-label">Auditor</span>
+<a href="/auditor/dashboard"      class="nav-link"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+<a href="/auditor/analysis"       class="nav-link active"><i class="bi bi-bar-chart-line-fill"></i> Analysis</a>
+<a href="/auditor/audit-logs"     class="nav-link"><i class="bi bi-journal-text"></i> Audit Logs</a>
+<a href="/auditor/billing-review" class="nav-link"><i class="bi bi-receipt"></i> Billing Review</a>
+<a href="/auditor/export"         class="nav-link"><i class="bi bi-download"></i> Export</a>
+<span class="nav-label">Account</span>
+<a href="/logout" class="nav-link text-danger"><i class="bi bi-box-arrow-right"></i> Logout</a>
+{% endblock %}
+
+{% block content %}
+
+<!-- Period selector -->
+<div class="d-flex align-items-center gap-2 mb-4">
+  <span class="text-muted fw-semibold" style="font-size:.9rem;">Appointment period:</span>
+  <div class="btn-group btn-group-sm" id="periodGroup">
+    <button class="btn btn-outline-primary" data-period="week">This Week</button>
+    <button class="btn btn-hms-primary active" data-period="month">This Month</button>
+    <button class="btn btn-outline-primary" data-period="year">This Year</button>
+    <button class="btn btn-outline-primary" data-period="all">All Time</button>
+  </div>
+</div>
+
+<!-- Row 1: Revenue + Appointment Status -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-8">
+    <div class="hms-card h-100">
+      <div class="card-header">
+        <i class="bi bi-graph-up-arrow text-success"></i>
+        <h6>Revenue vs Billed — Last 12 Months</h6>
+      </div>
+      <div class="card-body"><canvas id="revenueChart" height="90"></canvas></div>
+    </div>
+  </div>
+  <div class="col-lg-4">
+    <div class="hms-card h-100">
+      <div class="card-header">
+        <i class="bi bi-pie-chart-fill text-primary"></i>
+        <h6>Appointment Status</h6>
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center" style="min-height:240px;">
+        <canvas id="apptStatusChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Row 2: Dept Appointments + Payment Methods -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-8">
+    <div class="hms-card h-100">
+      <div class="card-header">
+        <i class="bi bi-bar-chart-fill text-warning"></i>
+        <h6>Appointments by Department</h6>
+      </div>
+      <div class="card-body"><canvas id="deptChart" height="120"></canvas></div>
+    </div>
+  </div>
+  <!-- <div class="col-lg-6">
+    <div class="hms-card h-100">
+      <div class="card-header">
+        <i class="bi bi-cash-coin text-success"></i>
+        <h6>Payment Method Distribution</h6>
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center" style="min-height:240px;">
+        <canvas id="paymentMethodChart"></canvas>
+      </div>
+    </div>
+  </div> -->
+  <div class="col-lg-4">
+    <div class="hms-card h-100">
+      <div class="card-header">
+        <i class="bi bi-pie-chart text-danger"></i>
+        <h6>Bill Status Breakdown</h6>
+      </div>
+      <div class="card-body d-flex align-items-center justify-content-center" style="min-height:240px;">
+        <canvas id="billStatusChart" ></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Row 3: Patient Trend + Bill Status -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-12">
+    <div class="hms-card h-100">
+      <div class="card-header">
+        <i class="bi bi-person-plus-fill text-primary"></i>
+        <h6>Patient Registrations — Last 30 Days</h6>
+      </div>
+      <div class="card-body"><canvas id="patientTrendChart" height="90"></canvas></div>
+    </div>
+  </div>
+  
+</div>
+
+<!-- Row 4: Top Doctors + Audit Actions -->
+<div class="row g-3 mb-4">
+  <div class="col-lg-6">
+    <div class="hms-card h-100">
+      <div class="card-header">
+        <i class="bi bi-person-badge-fill text-primary"></i>
+        <h6>Top 8 Doctors by Appointments</h6>
+      </div>
+      <div class="card-body"><canvas id="topDoctorsChart" height="140"></canvas></div>
+    </div>
+  </div>
+  <!-- <div class="col-lg-6">
+    <div class="hms-card h-100">
+      <div class="card-header">
+        <i class="bi bi-shield-lock-fill text-purple"></i>
+        <h6>Top Audit Actions</h6>
+      </div>
+      <div class="card-body"><canvas id="auditActionsChart" height="140"></canvas></div>
+    </div>
+  </div> -->
+</div>
+
+<!-- Row 5: Activity by Role (full width) -->
+<div class="row g-3 mb-4">
+  <div class="col-12">
+    <div class="hms-card">
+      <div class="card-header">
+        <i class="bi bi-people-fill text-info"></i>
+        <h6>System Activity by Role — Last 30 Days</h6>
+      </div>
+      <div class="card-body">
+        <div id="roleActivityTable"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function(){
+
+const TEAL   = 'rgba(13,148,136,.75)';
+const GREEN  = 'rgba(22,163,74,.7)';
+const AMBER  = 'rgba(245,158,11,.75)';
+const BLUE   = 'rgba(37,99,235,.7)';
+const VIOLET = 'rgba(124,58,237,.7)';
+const RED    = 'rgba(220,38,38,.7)';
+const PINK   = 'rgba(219,39,119,.65)';
+
+const PALETTE = [TEAL, GREEN, AMBER, BLUE, VIOLET, RED, PINK,
+                 'rgba(14,165,233,.7)', 'rgba(132,204,22,.7)', 'rgba(234,88,12,.7)'];
+
+let activePeriod = 'month';
+let apptStatusChart = null;
+
+// ── Period switcher ────────────────────────────────────────────────
+document.getElementById('periodGroup').addEventListener('click', e => {
+  const btn = e.target.closest('[data-period]');
+  if (!btn) return;
+  document.querySelectorAll('#periodGroup .btn').forEach(b => {
+    b.classList.remove('btn-hms-primary','active');
+    b.classList.add('btn-outline-primary');
+  });
+  btn.classList.add('btn-hms-primary','active');
+  btn.classList.remove('btn-outline-primary');
+  activePeriod = btn.dataset.period;
+  loadApptStatus();
+});
+
+// ── Revenue Chart ──────────────────────────────────────────────────
+async function loadRevenueChart() {
+  const data = await apiRequest('/auditor/api/analysis/revenue-trend');
+  new Chart(document.getElementById('revenueChart'), {
+    type: 'bar',
+    data: {
+      labels   : data.map(d => d.label),
+      datasets : [
+        { label: 'Revenue Collected', data: data.map(d => d.revenue),
+          backgroundColor: TEAL, borderRadius: 4 },
+        { label: 'Total Billed',      data: data.map(d => d.billed),
+          backgroundColor: AMBER, borderRadius: 4 },
+      ]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { position: 'bottom' } },
+      scales: {
+        y: { beginAtZero: true,
+             ticks: { callback: v => '₹' + v.toLocaleString('en-IN') } }
+      }
+    }
+  });
+}
+
+// ── Appointment Status ─────────────────────────────────────────────
+async function loadApptStatus() {
+  const data = await apiRequest(`/auditor/api/analysis/appt-status?period=${activePeriod}`);
+  const STATUS_COLORS = { 'Scheduled':'#3b82f6','Completed':'#16a34a',
+                           'Cancelled':'#e74c3c','No-Show':'#f59e0b','Checked-In':'#8b5cf6' };
+
+  if (apptStatusChart) { apptStatusChart.destroy(); apptStatusChart = null; }
+
+  apptStatusChart = new Chart(document.getElementById('apptStatusChart'), {
+    type: 'doughnut',
+    data: {
+      labels  : data.map(d => d.status),
+      datasets: [{ data: data.map(d => d.count),
+                   backgroundColor: data.map(d => STATUS_COLORS[d.status] || '#94a3b8'),
+                   hoverOffset: 8 }]
+    },
+    options: { cutout:'60%', plugins: { legend: { position:'bottom' } } }
+  });
+}
+
+// ── Department Chart ───────────────────────────────────────────────
+async function loadDeptChart() {
+  const data = await apiRequest('/auditor/api/analysis/dept-appointments');
+  new Chart(document.getElementById('deptChart'), {
+    type: 'bar',
+    data: {
+      labels  : data.map(d => d.dept),
+      datasets: [{ label: 'Appointments', data: data.map(d => d.count),
+                   backgroundColor: BLUE, borderRadius: 4 }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true,
+      plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true } }
+    }
+  });
+}
+
+// ── Payment Methods ────────────────────────────────────────────────
+async function loadPaymentMethods() {
+  const data = await apiRequest('/auditor/api/analysis/payment-methods');
+  new Chart(document.getElementById('paymentMethodChart'), {
+    type: 'pie',
+    data: {
+      labels  : data.map(d => `${d.method} (${d.count})`),
+      datasets: [{ data: data.map(d => d.total),
+                   backgroundColor: PALETTE.slice(0, data.length),
+                   hoverOffset: 6 }]
+    },
+    options: {
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: { callbacks: {
+          label: ctx => ` ₹${ctx.parsed.toLocaleString('en-IN')}`
+        }}
+      }
+    }
+  });
+}
+
+// ── Patient Trend ──────────────────────────────────────────────────
+async function loadPatientTrend() {
+  const data = await apiRequest('/auditor/api/analysis/patient-trend');
+  new Chart(document.getElementById('patientTrendChart'), {
+    type: 'line',
+    data: {
+      labels  : data.map(d => d.date),
+      datasets: [{ label: 'New Patients', data: data.map(d => d.count),
+                   borderColor: TEAL, backgroundColor: 'rgba(13,148,136,.12)',
+                   tension: .4, fill: true, pointRadius: 2 }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+    }
+  });
+}
+
+// ── Bill Status Pie ────────────────────────────────────────────────
+async function loadBillStatus() {
+  const data = await apiRequest('/auditor/api/analysis/bill-status');
+  const BILL_COLORS = { 'Paid':'#16a34a','Pending':'#f59e0b','Partial':'#3b82f6','Cancelled':'#e74c3c' };
+  new Chart(document.getElementById('billStatusChart'), {
+    type: 'doughnut',
+    data: {
+      labels  : data.map(d => `${d.status} (${d.count})`),
+      datasets: [{ data: data.map(d => d.total),
+                   backgroundColor: data.map(d => BILL_COLORS[d.status] || '#94a3b8'),
+                   hoverOffset: 8 }]
+    },
+    options: {
+      cutout: '55%',
+      plugins: {
+        legend: { position: 'bottom' },
+        tooltip: { callbacks: {
+          label: ctx => ` ₹${ctx.parsed.toLocaleString('en-IN')}`
+        }}
+      }
+    }
+  });
+}
+
+// ── Top Doctors ────────────────────────────────────────────────────
+async function loadTopDoctors() {
+  const data = await apiRequest('/auditor/api/analysis/top-doctors');
+  new Chart(document.getElementById('topDoctorsChart'), {
+    type: 'bar',
+    data: {
+      labels  : data.map(d => d.doctor),
+      datasets: [{ label: 'Appointments', data: data.map(d => d.count),
+                   backgroundColor: VIOLET, borderRadius: 4 }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true,
+      plugins: { legend: { display: false },
+                 tooltip: { callbacks: { afterLabel: ctx => ` Dept: ${data[ctx.dataIndex].department}` }}},
+      scales: { x: { beginAtZero: true } }
+    }
+  });
+}
+
+// ── Audit Actions ──────────────────────────────────────────────────
+async function loadAuditActions() {
+  const data = await apiRequest('/auditor/api/analysis/audit-actions');
+  new Chart(document.getElementById('auditActionsChart'), {
+    type: 'bar',
+    data: {
+      labels  : data.map(d => d.action),
+      datasets: [{ label: 'Count', data: data.map(d => d.count),
+                   backgroundColor: PINK, borderRadius: 4 }]
+    },
+    options: {
+      indexAxis: 'y', responsive: true,
+      plugins: { legend: { display: false } },
+      scales: { x: { beginAtZero: true } }
+    }
+  });
+}
+
+// ── Role Activity Table ────────────────────────────────────────────
+async function loadRoleActivity() {
+  const data = await apiRequest('/auditor/api/analysis/activity-by-role');
+  const total = data.reduce((s, d) => s + d.count, 0) || 1;
+  const html = `
+    <table class="table hms-table">
+      <thead><tr><th>Role</th><th>Events (Last 30 Days)</th><th>Share</th></tr></thead>
+      <tbody>
+        ${data.map(d => {
+          const pct = Math.round(d.count / total * 100);
+          return `
+          <tr>
+            <td><strong>${d.role}</strong></td>
+            <td>${d.count.toLocaleString()}</td>
+            <td style="min-width:180px;">
+              <div class="d-flex align-items-center gap-2">
+                <div style="flex:1;background:#e5e7eb;border-radius:4px;height:8px;">
+                  <div style="width:${pct}%;background:var(--hms-primary);border-radius:4px;height:8px;"></div>
+                </div>
+                <span style="font-size:.8rem;color:#666;">${pct}%</span>
+              </div>
+            </td>
+          </tr>`;
+        }).join('')}
+      </tbody>
+    </table>`;
+  document.getElementById('roleActivityTable').innerHTML = html;
+}
+
+// ── Init (parallel load) ───────────────────────────────────────────
+Promise.all([
+  loadRevenueChart(),
+  loadApptStatus(),
+  loadDeptChart(),
+  loadPaymentMethods(),
+  loadPatientTrend(),
+  loadBillStatus(),
+  loadTopDoctors(),
+  loadAuditActions(),
+  loadRoleActivity(),
+]).catch(e => console.error('Analysis load error:', e));
+
+})();
+</script>
+{% endblock %}

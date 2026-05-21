@@ -1,0 +1,437 @@
+{% extends "common/base.html" %}
+{% block title %}Treatment Bills{% endblock %}
+{% block page_heading %}Treatment Bills{% endblock %}
+
+{% block sidebar_nav %}
+<span class="nav-label">Reception</span>
+<a href="/receptionist/dashboard"        class="nav-link"><i class="bi bi-grid-1x2-fill"></i> Dashboard</a>
+<a href="/receptionist/register-patient" class="nav-link"><i class="bi bi-person-plus-fill"></i> Register Patient</a>
+<a href="/receptionist/book-appointment" class="nav-link"><i class="bi bi-calendar-plus"></i> Book Appointment</a>
+<a href="/receptionist/check-in"         class="nav-link"><i class="bi bi-check2-circle"></i> Check-In</a>
+<a href="/receptionist/generate-bill"    class="nav-link"><i class="bi bi-receipt"></i> Generate Bill</a>
+
+<!-- <a href="/receptionist/record-payment"   class="nav-link"><i class="bi bi-cash-coin"></i> Record Payment</a> -->
+<a href="/receptionist/billing"          class="nav-link active"><i class="bi bi-file-earmark-medical"></i> Treatment Bills</a>
+<!-- <span class="nav-label">Logs</span> -->
+<!-- <a href="/receptionist/audit-logs" class="nav-link"><i class="bi bi-journal-text"></i> Audit Logs</a>
+  -->
+<a href="/receptionist/messages" class="nav-link">
+    <i class="bi bi-envelope-fill"></i> Messages
+</a>
+<span class="nav-label">Account</span>
+<a href="/logout" class="nav-link text-danger"><i class="bi bi-box-arrow-right"></i> Logout</a>
+{% endblock %}
+
+{% block extra_css %}
+<style>
+.opid-badge {
+  font-family: monospace;
+  font-size: .78rem;
+  background: #eff3ff;
+  color: #3b5bdb;
+  border-radius: 6px;
+  padding: 2px 7px;
+  font-weight: 600;
+  letter-spacing: .3px;
+}
+.status-pill {
+  display: inline-block;
+  padding: 2px 10px;
+  border-radius: 20px;
+  font-size: .76rem;
+  font-weight: 600;
+}
+.pill-pending  { background:#fff3cd; color:#856404; }
+.pill-partial  { background:#cfe2ff; color:#084298; }
+.pill-paid     { background:#d1e7dd; color:#0a3622; }
+.flow-step {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f8f9fa;
+  border: 1px solid #e0e4ef;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: .8rem;
+}
+.flow-step.active { background: #eff3ff; border-color: #91a7ff; color: #3b5bdb; font-weight:600; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<!-- Filters -->
+<div class="hms-card mb-3">
+  <div class="card-body p-3">
+    <div class="row g-2 align-items-center">
+      <div class="col-md-5">
+        <div class="input-group">
+          <span class="input-group-text bg-white"><i class="bi bi-search"></i></span>
+          <input type="text" id="searchInput" class="form-control"
+                 placeholder="Search patient name…"/>
+          <button class="btn btn-hms-primary" id="searchBtn">Search</button>
+        </div>
+      </div>
+      <div class="col-md-3">
+        <select id="statusFilter" class="form-select">
+          <option value="">All Statuses</option>
+          <option value="Pending">Pending</option>
+          <option value="Partial">Partial</option>
+          <option value="Paid">Paid</option>
+        </select>
+      </div>
+      <div class="col-md-4 text-end">
+        <span class="text-muted small" id="resultCount">—</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Bills Table -->
+<div class="hms-card">
+  <div class="card-header">
+    <i class="bi bi-file-earmark-medical text-primary"></i>
+    <h6>Treatment Bills — OPID Tracked</h6>
+    <span class="ms-auto badge bg-warning text-dark" id="pendingCount">0 pending</span>
+  </div>
+  <div class="card-body p-0">
+    <div class="table-responsive">
+      <table class="table hms-table mb-0">
+        <thead>
+          <tr>
+            <th>OPID</th>
+            <th>Patient</th>
+            <th>Treatment</th>
+            <th>Date</th>
+            <th>Total (₹)</th>
+            <th>Paid (₹)</th>
+            <th>Balance (₹)</th>
+            <th>Status</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody id="billsBody">
+          <tr><td colspan="9" class="text-center py-4">
+            <div class="spinner-border spinner-border-sm text-primary"></div>
+          </td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="d-flex justify-content-end p-3" id="pagination"></div>
+  </div>
+</div>
+
+<!-- Payment Modal -->
+<div class="modal fade" id="payModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">
+          <i class="bi bi-cash-coin me-2 text-success"></i>Collect Payment
+        </h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-3 p-3 rounded" style="background:#f8f9fa;border:1px solid #e0e4ef;">
+          <div class="d-flex justify-content-between mb-1">
+            <span class="text-muted small">OPID</span>
+            <strong id="modalOpid" class="opid-badge">—</strong>
+          </div>
+          <div class="d-flex justify-content-between mb-1">
+            <span class="text-muted small">Patient</span>
+            <strong id="modalPatient">—</strong>
+          </div>
+          <div class="d-flex justify-content-between mb-1">
+            <span class="text-muted small">Treatment</span>
+            <span id="modalTreatment">—</span>
+          </div>
+          <div class="d-flex justify-content-between mb-1">
+            <span class="text-muted small">Total Amount</span>
+            <span id="modalTotal">—</span>
+          </div>
+          <div class="d-flex justify-content-between">
+            <span class="text-muted small">Balance Due</span>
+            <strong class="text-danger" id="modalBalance">—</strong>
+          </div>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Payment Amount (₹) <span class="text-danger">*</span></label>
+          <input type="number" id="payAmount" class="form-control form-control-lg"
+                 placeholder="0.00" step="0.01" min="0.01"/>
+        </div>
+        <div class="mb-3">
+          <label class="form-label fw-semibold">Payment Method</label>
+          <select id="payMethod" class="form-select">
+            <option value="Cash">Cash</option>
+            <option value="UPI">UPI</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button class="btn btn-success" id="confirmPayBtn">
+          <i class="bi bi-check-circle me-1"></i>Confirm Payment
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let currentPage = 1;
+let activeBillId = null;
+
+function statusPill(s) {
+  if (!s) return '—';
+  const cls = s === 'Paid' ? 'pill-paid' : s === 'Partial' ? 'pill-partial' : 'pill-pending';
+  return `<span class="status-pill ${cls}">${s}</span>`;
+}
+
+async function loadBills(page = 1) {
+  currentPage = page;
+  const search = document.getElementById('searchInput').value.trim();
+  const status = document.getElementById('statusFilter').value;
+  const body   = document.getElementById('billsBody');
+
+  body.innerHTML = `<tr><td colspan="9" class="text-center py-3">
+    <div class="spinner-border spinner-border-sm text-primary"></div></td></tr>`;
+
+  try {
+    const data = await apiRequest(
+      `/receptionist/api/treatment-bills?page=${page}&search=${encodeURIComponent(search)}&status=${encodeURIComponent(status)}`
+    );
+
+    const pending = (data.items || []).filter(b => b.status !== 'Paid').length;
+    document.getElementById('pendingCount').textContent = `${pending} pending`;
+    document.getElementById('resultCount').textContent  = `${data.total ?? 0} records`;
+
+    if (!data.items?.length) {
+      body.innerHTML = `<tr><td colspan="9" class="text-center py-5 text-muted">
+        <i class="bi bi-inbox" style="font-size:2rem;opacity:.3;"></i>
+        <p class="mt-2 mb-0">No treatment bills found.</p>
+        <p class="small">Bills appear here automatically when a doctor completes treatment.</p>
+      </td></tr>`;
+      return;
+    }
+
+    body.innerHTML = data.items.map(b => `
+      <tr class="${b.status !== 'Paid' ? 'table-light' : ''}">
+        <td><span class="opid-badge">${b.opid}</span></td>
+        <td>
+          <strong>${b.patient_name}</strong><br/>
+          <span class="text-muted" style="font-size:.75rem;">PT-${String(b.patient_id).padStart(4,'0')}</span>
+        </td>
+        <td>${b.treatment}</td>
+        <td><span style="font-size:.82rem;">${b.appt_date}</span></td>
+        <td><strong>₹${Number(b.total_amount).toFixed(2)}</strong></td>
+        <td class="text-success">₹${Number(b.amount_paid).toFixed(2)}</td>
+        <td class="${b.balance > 0 ? 'text-danger fw-bold' : 'text-muted'}">
+          ₹${Number(b.balance).toFixed(2)}
+        </td>
+        <td>${statusPill(b.status)}</td>
+        <td>
+          ${b.status !== 'Paid'
+            ? `<button class="btn btn-sm btn-success"
+                 onclick="openPayModal(${b.bill_id},'${b.opid}','${b.patient_name}','${b.treatment}',${b.total_amount},${b.balance})">
+                 <i class="bi bi-cash me-1"></i>Collect
+               </button>`
+            : `<span class="text-success small"><i class="bi bi-check-circle-fill"></i> Paid</span>`
+          }
+        </td>
+      </tr>`).join('');
+
+    renderPagination('pagination', page, data.total_pages, loadBills);
+  } catch (err) {
+    console.error(err);
+    body.innerHTML = `<tr><td colspan="9" class="text-center text-danger py-4">Error loading bills.</td></tr>`;
+  }
+}
+
+function openPayModal(billId, opid, patient, treatment, total, balance) {
+  activeBillId = billId;
+  document.getElementById('modalOpid').textContent      = opid;
+  document.getElementById('modalPatient').textContent   = patient;
+  document.getElementById('modalTreatment').textContent = treatment;
+  document.getElementById('modalTotal').textContent     = `₹${Number(total).toFixed(2)}`;
+  document.getElementById('modalBalance').textContent   = `₹${Number(balance).toFixed(2)}`;
+  document.getElementById('payAmount').value            = Number(balance).toFixed(2);
+  new bootstrap.Modal(document.getElementById('payModal')).show();
+}
+document.getElementById('confirmPayBtn').addEventListener('click', async () => {
+
+  const amount = parseFloat(
+    document.getElementById('payAmount').value
+  );
+
+  if (!amount || amount <= 0) {
+
+    showToast('Enter valid amount', 'warning');
+
+    return;
+  }
+
+  const method =
+    document.getElementById('payMethod').value;
+
+  if (!method) {
+
+    showToast('Select payment method', 'warning');
+
+    return;
+  }
+
+  const btn =
+    document.getElementById('confirmPayBtn');
+
+  btn.disabled = true;
+
+  btn.innerHTML =
+    '<span class="spinner-border spinner-border-sm me-1"></span>Processing…';
+
+  try {
+
+    /* CASH PAYMENT */
+    if (method === 'Cash') {
+
+      const res = await apiRequest(
+        `/receptionist/api/treatment-bills/${activeBillId}/pay`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            amount: amount,
+            payment_method: 'Cash'
+          })
+        }
+      );
+
+      bootstrap
+        .Modal
+        .getInstance(
+          document.getElementById('payModal')
+        )
+        .hide();
+
+      showToast(
+        `Payment collected successfully!`,
+        'success'
+      );
+
+      loadBills(currentPage);
+
+      return;
+    }
+
+    /* UPI / CARD PAYMENT */
+    if (
+      method === 'UPI' ||
+      method === 'Card'
+    ) {
+
+      const order = await apiRequest(
+        '/receptionist/api/create-order',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            amount: amount
+          })
+        }
+      );
+
+      const options = {
+
+        key: "rzp_test_SgoWav1ySgiwfc",
+
+        amount: order.amount,
+
+        currency: "INR",
+
+        name: "Hospital Management System",
+
+        description: "Treatment Bill Payment",
+
+        order_id: order.id,
+
+        handler: async function (response) {
+
+          await apiRequest(
+            '/receptionist/api/verify-payment',
+            {
+              method: 'POST',
+              body: JSON.stringify({
+
+                bill_id: activeBillId,
+
+                razorpay_payment_id:
+                  response.razorpay_payment_id
+
+              })
+            }
+          );
+
+          bootstrap
+            .Modal
+            .getInstance(
+              document.getElementById('payModal')
+            )
+            .hide();
+
+          showToast(
+            'Payment Successful!',
+            'success'
+          );
+
+          loadBills(currentPage);
+        },
+
+        theme: {
+          color: "#198754"
+        }
+      };
+
+      const rzp = new Razorpay(options);
+
+      rzp.open();
+
+      return;
+    }
+
+    /* NET BANKING */
+    if (method === 'Net Banking') {
+
+      showToast(
+        'Net Banking integration coming soon',
+        'info'
+      );
+    }
+
+  } catch (err) {
+
+    console.error(err);
+
+    showToast(
+      'Payment failed',
+      'danger'
+    );
+
+  } finally {
+
+    btn.disabled = false;
+
+    btn.innerHTML =
+      '<i class="bi bi-check-circle me-1"></i>Confirm Payment';
+  }
+
+});
+
+document.getElementById('searchBtn').addEventListener('click', () => loadBills(1));
+document.getElementById('searchInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') loadBills(1);
+});
+document.getElementById('statusFilter').addEventListener('change', () => loadBills(1));
+
+loadBills(1);
+</script>
+{% endblock %}

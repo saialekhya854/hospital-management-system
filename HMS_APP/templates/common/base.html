@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+  <title>{% block title %}LifeCare{% endblock %} | Hospital Management System</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@300;400;600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Bootstrap 5 -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet" />
+  <!-- Chart.js (loaded here so every page can optionally use it) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+
+  <style>
+    /* ─── HMS Global Theme — Teal-Green ───────────────── */
+    :root {
+      --hms-primary: #0d9488;
+      /* teal-600 */
+      --hms-primary-d: #0f766e;
+      /* teal-700 */
+      --hms-primary-l: #ccfbf1;
+      /* teal-100 */
+      --hms-accent: #16a34a;
+      /* green-600 */
+      --hms-accent-d: #15803d;
+      /* green-700 */
+      --hms-dark: #134e4a;
+      /* deep teal */
+      --hms-sidebar: #0f2e2b;
+      /* very dark teal */
+      --hms-sidebar-t: #d1faf4;
+      /* light teal text */
+      --hms-sidebar-a: #2dd4bf;
+      /* teal-400 — active highlight */
+      --hms-danger: #e74c3c;
+      --hms-warning: #f59e0b;
+      --hms-success: #16a34a;
+      --hms-body-bg: #f0fdf9;
+      /* very light teal bg */
+      --hms-card-shadow: 0 2px 12px rgba(13, 148, 136, .10);
+      --sidebar-w: 240px;
+    }
+
+    * {
+      font-family: 'Nunito', sans-serif;
+    }
+
+    body {
+      background: var(--hms-body-bg);
+      min-height: 100vh;
+      color: #1a3a37;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6 {
+      color: var(--hms-dark);
+    }
+
+    a {
+      color: var(--hms-primary);
+    }
+
+    a:hover {
+      color: var(--hms-primary-d);
+    }
+
+    /* ─── Sidebar ──────────────────────────────────────── */
+    #sidebar {
+      width: var(--sidebar-w);
+      height: 100vh;
+      background: var(--hms-sidebar);
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 1040;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      transition: width .25s ease;
+    }
+
+    #sidebar .mt-2 {
+      overflow-y: auto;
+      overflow-x: hidden;
+      flex: 1;
+      min-height: 0;
+      padding-bottom: 8px;
+      scrollbar-width: thin;
+      scrollbar-color: #2dd4bf55 transparent;
+    }
+
+    #sidebar .mt-2::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    #sidebar .mt-2::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    #sidebar .mt-2::-webkit-scrollbar-thumb {
+      background: #2dd4bf55;
+      border-radius: 4px;
+    }
+
+    #sidebar .mt-2::-webkit-scrollbar-thumb:hover {
+      background: #2dd4bf;
+    }
+
+    #sidebar .brand {
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, .08);
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+    }
+
+    #sidebar .brand-icon {
+      font-size: 1.6rem;
+    }
+
+    #sidebar .brand-name {
+      color: #fff;
+      font-weight: 800;
+      font-size: 1.05rem;
+      letter-spacing: .5px;
+    }
+
+    #sidebar .nav-label {
+      color: rgba(255, 255, 255, .35);
+      font-size: .68rem;
+      font-weight: 700;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: .9rem 1.4rem .3rem;
+    }
+
+    #sidebar .nav-link {
+      color: var(--hms-sidebar-t);
+      padding: .65rem 1.4rem;
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+      font-size: .88rem;
+      font-weight: 600;
+      border-radius: 0;
+      transition: background .18s, color .18s;
+      border-left: 3px solid transparent;
+    }
+
+    #sidebar .nav-link i {
+      font-size: 1rem;
+      width: 1.2rem;
+      text-align: center;
+    }
+
+    #sidebar .nav-link:hover {
+      background: rgba(255, 255, 255, .06);
+      color: #fff;
+    }
+
+    #sidebar .nav-link.active {
+      background: rgba(13, 148, 136, .22);
+      color: var(--hms-sidebar-a);
+      border-left-color: var(--hms-sidebar-a);
+    }
+
+    #sidebar .sidebar-footer {
+      flex-shrink: 0;
+      padding: 1rem 1.4rem;
+      border-top: 1px solid rgba(255, 255, 255, .08);
+    }
+
+    #sidebar .sidebar-footer .user-thumb {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--hms-primary);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      font-size: .85rem;
+      flex-shrink: 0;
+    }
+
+    #sidebar .sidebar-footer .user-name {
+      color: #fff;
+      font-size: .82rem;
+      font-weight: 700;
+    }
+
+    #sidebar .sidebar-footer .user-role {
+      color: rgba(255, 255, 255, .45);
+      font-size: .72rem;
+    }
+
+    /* ─── Topbar ───────────────────────────────────────── */
+    #topbar {
+      position: fixed;
+      top: 0;
+      left: var(--sidebar-w);
+      right: 0;
+      height: 60px;
+      background: #fff;
+      border-bottom: 1px solid #e3e8f0;
+      z-index: 1030;
+      display: flex;
+      align-items: center;
+      padding: 0 1.5rem;
+      gap: 1rem;
+      box-shadow: 0 1px 4px rgba(28, 43, 74, .06);
+    }
+
+    #topbar .page-heading {
+      font-weight: 800;
+      font-size: 1.05rem;
+      color: var(--hms-dark);
+      margin: 0;
+    }
+
+    #topbar .ms-auto {
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+    }
+
+    .btn-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      border: none;
+      background: var(--hms-body-bg);
+      color: #555;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background .15s;
+    }
+
+    .btn-icon:hover {
+      background: #e3e8f0;
+    }
+
+    /* ─── Main wrapper ─────────────────────────────────── */
+    #main-wrapper {
+      margin-left: var(--sidebar-w);
+      padding-top: 60px;
+    }
+
+    .page-content {
+      padding: 1.75rem 1.5rem;
+    }
+
+    /* ─── Cards ────────────────────────────────────────── */
+    .hms-card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: var(--hms-card-shadow);
+      border: none;
+    }
+
+    .hms-card .card-header {
+      background: #fff;
+      border-bottom: 1px solid #e8edf5;
+      padding: 1rem 1.25rem;
+      border-radius: 12px 12px 0 0;
+      display: flex;
+      align-items: center;
+      gap: .75rem;
+    }
+
+    .hms-card .card-header h6 {
+      margin: 0;
+      font-weight: 800;
+      font-size: .92rem;
+      color: var(--hms-dark);
+    }
+
+    /* ─── KPI Stat cards ───────────────────────────────── */
+    .stat-card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: var(--hms-card-shadow);
+      padding: 1.25rem 1.4rem;
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .stat-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.4rem;
+      flex-shrink: 0;
+    }
+
+    .stat-label {
+      font-size: .75rem;
+      color: #888;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+    }
+
+    .stat-value {
+      font-size: 1.65rem;
+      font-weight: 800;
+      color: var(--hms-dark);
+      line-height: 1.1;
+    }
+
+    /* ─── Tables ───────────────────────────────────────── */
+    .hms-table th {
+      font-size: .72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .8px;
+      color: #0f766e;
+      background: #f0fdf9;
+      border-bottom: 2px solid #99f6e4;
+    }
+
+    .hms-table td {
+      font-size: .85rem;
+      vertical-align: middle;
+      color: #1a3a37;
+    }
+
+    .hms-table tbody tr:hover {
+      background: #f0fdf9;
+    }
+
+    /* ─── Badges ───────────────────────────────────────── */
+    .badge-status {
+      padding: .3em .75em;
+      border-radius: 20px;
+      font-size: .72rem;
+      font-weight: 700;
+    }
+
+    .status-scheduled {
+      background: #ccfbf1;
+      color: #0f766e;
+    }
+
+    .status-checked-in {
+      background: #fff3cd;
+      color: #856404;
+    }
+
+    .status-in-progress {
+      background: #fff0f0;
+      color: #c0392b;
+    }
+
+    .status-completed {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .status-cancelled {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    .status-pending {
+      background: #fef3cd;
+      color: #7a5c00;
+    }
+
+    .status-partial {
+      background: #dce5ff;
+      color: #2c3e7a;
+    }
+
+    .status-paid {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .status-active {
+      background: #d4edda;
+      color: #155724;
+    }
+
+    .status-inactive {
+      background: #f8d7da;
+      color: #721c24;
+    }
+
+    /* ─── Buttons ──────────────────────────────────────── */
+    .btn-hms-primary {
+      background: var(--hms-primary);
+      color: #fff;
+      border: none;
+      font-weight: 700;
+    }
+
+    .btn-hms-primary:hover {
+      background: var(--hms-primary-d);
+      color: #fff;
+    }
+
+    .btn-hms-outline {
+      border: 2px solid var(--hms-primary);
+      color: var(--hms-primary);
+      background: transparent;
+      font-weight: 700;
+    }
+
+    .btn-hms-outline:hover {
+      background: var(--hms-primary);
+      color: #fff;
+    }
+
+    /* ─── Forms ────────────────────────────────────────── */
+    .form-control:focus,
+    .form-select:focus {
+      border-color: var(--hms-primary);
+      box-shadow: 0 0 0 .2rem rgba(26, 115, 232, .15);
+    }
+
+    /* ─── Pagination ───────────────────────────────────── */
+    .pagination .page-link {
+      color: var(--hms-primary);
+    }
+
+    .pagination .page-item.active .page-link {
+  background: var(--hms-primary);
+  border-color: var(--hms-primary);
+  color: #ffffff !important;
+}
+
+    /* ─── Toast ────────────────────────────────────────── */
+    #toast-container {
+      position: fixed;
+      bottom: 1.5rem;
+      right: 1.5rem;
+      z-index: 9999;
+    }
+
+    .hms-toast {
+      min-width: 280px;
+      border-radius: 10px;
+      font-size: .85rem;
+      font-weight: 600;
+    }
+
+    /* ─── Filters bar ──────────────────────────────────── */
+    .filter-bar {
+      background: #fff;
+      border-radius: 10px;
+      padding: .75rem 1rem;
+      box-shadow: var(--hms-card-shadow);
+      margin-bottom: 1rem;
+      display: flex;
+      flex-wrap: wrap;
+      gap: .6rem;
+      align-items: center;
+    }
+
+    /* ─── Responsive ───────────────────────────────────── */
+    @media(max-width:768px) {
+      #sidebar {
+        width: 0;
+        overflow: hidden;
+      }
+
+      #sidebar.open {
+        width: var(--sidebar-w);
+      }
+
+      #topbar {
+        left: 0;
+      }
+
+      #main-wrapper {
+        margin-left: 0;
+      }
+    }
+
+    /* ===== TEAL-GREEN THEME OVERRIDES ===== */
+
+    body {
+      background: var(--hms-body-bg);
+      color: #1a3a37;
+    }
+
+    /* sidebar — deep teal */
+    #sidebar {
+      background: var(--hms-sidebar);
+      border-right: 1px solid rgba(255, 255, 255, .06);
+    }
+
+    #sidebar .brand {
+      background: rgba(255, 255, 255, .03);
+    }
+
+    #sidebar .nav-link {
+      color: #a7f3d0;
+      border-radius: 10px;
+      margin: 3px 10px;
+    }
+
+    #sidebar .nav-link:hover {
+      background: rgba(45, 212, 191, .12);
+      color: #fff;
+    }
+
+    #sidebar .nav-link.active {
+      background: linear-gradient(90deg, #0d9488, #2dd4bf);
+      color: #fff;
+      box-shadow: 0 6px 18px rgba(13, 148, 136, .30);
+      border-left-color: transparent;
+    }
+
+    #sidebar .nav-label {
+      color: rgba(167, 243, 208, .45);
+    }
+
+    /* topbar — white with teal accent */
+    #topbar {
+      background: #fff;
+      border-bottom: 2px solid #99f6e4;
+      color: var(--hms-dark);
+    }
+
+    #topbar .page-heading {
+      color: var(--hms-dark);
+    }
+
+    .btn-icon {
+      background: #f0fdf9;
+      color: #0f766e;
+    }
+
+    .btn-icon:hover {
+      background: #ccfbf1;
+      color: #134e4a;
+    }
+
+    /* cards — white with teal borders */
+    .hms-card {
+      background: #fff;
+      border: 1px solid #e6faf6;
+      box-shadow: 0 2px 16px rgba(13, 148, 136, .08);
+      color: #1a3a37;
+    }
+
+    .hms-card .card-header {
+      border-bottom: 1px solid #ccfbf1;
+    }
+
+    .stat-card {
+      background: #fff;
+      border: 1px solid #e6faf6;
+      box-shadow: 0 2px 16px rgba(13, 148, 136, .08);
+    }
+
+    /* tables */
+    .hms-table th {
+      background: #f0fdf9;
+      color: #0f766e;
+      border-bottom-color: #99f6e4;
+    }
+
+    .hms-table td {
+      color: #1a3a37;
+    }
+
+    .hms-table tbody tr:hover {
+      background: #f0fdf9;
+    }
+
+    /* stat labels */
+    .stat-label {
+      color: #5eada2;
+    }
+
+    .stat-value {
+      color: var(--hms-dark);
+    }
+
+    /* buttons */
+    .btn-hms-primary {
+      background: linear-gradient(90deg, #0d9488, #16a34a);
+      border: none;
+      color: #fff;
+    }
+
+    .btn-hms-primary:hover {
+      background: linear-gradient(90deg, #0f766e, #15803d);
+      color: #fff;
+    }
+
+    .btn-hms-outline {
+      border-color: var(--hms-primary);
+      color: var(--hms-primary);
+    }
+
+    .btn-hms-outline:hover {
+      background: var(--hms-primary);
+      color: #fff;
+    }
+
+    /* forms */
+    .form-control,
+    .form-select {
+      background: #fff;
+      border: 1px solid #99f6e4;
+      color: #1a3a37;
+    }
+
+    .form-control:focus,
+    .form-select:focus {
+      border-color: var(--hms-primary);
+      box-shadow: 0 0 0 .2rem rgba(13, 148, 136, .18);
+      color: #1a3a37;
+    }
+
+    .form-control::placeholder {
+      color: #8ac4bc;
+    }
+
+    /* filter bar */
+    .filter-bar {
+      background: #fff;
+      border: 1px solid #e6faf6;
+    }
+
+    /* sidebar footer */
+    .user-name {
+      color: #fff !important;
+    }
+
+    .user-role {
+      color: rgba(167, 243, 208, .65) !important;
+    }
+
+    /* pagination */
+    .pagination .page-link {
+      color: var(--hms-primary);
+    }
+
+
+
+    /* toast */
+    .hms-toast {
+      box-shadow: 0 4px 16px rgba(13, 148, 136, .18);
+    }
+  </style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/validation.css') }}">
+  {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+
+  <!-- ═══════════ SIDEBAR ═══════════════════════════════════════════════════ -->
+  <nav id="sidebar">
+    <div class="brand">
+      <span class="brand-icon">🏥</span>
+      <span class="brand-name">LifeCare</span>
+    </div>
+
+    <div class="mt-2">
+      {% block sidebar_nav %}{% endblock %}
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="d-flex align-items-center gap-2">
+        <div class="user-thumb">{{ session.user_initials or 'U' }}</div>
+        <div>
+          <div class="user-name">{{ session.user_name or 'User' }}</div>
+          <div class="user-role">{{ session.role or '' }}</div>
+        </div>
+        <a href="/logout" class="ms-auto btn-icon" title="Logout">
+          <i class="bi bi-box-arrow-right"></i>
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ═══════════ TOPBAR ════════════════════════════════════════════════════ -->
+  <header id="topbar">
+    <button class="btn-icon d-md-none" id="sidebarToggle">
+      <i class="bi bi-list"></i>
+    </button>
+    <h1 class="page-heading">{% block page_heading %}Dashboard{% endblock %}</h1>
+    <!-- <div class="ms-auto">
+      <button class="btn-icon position-relative" id="notifBtn" title="Notifications">
+        <i class="bi bi-bell"></i>
+        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+          style="font-size:.6rem" id="notifBadge" hidden>0</span>
+      </button>
+      <button class="btn-icon" title="Settings" data-bs-toggle="offcanvas" data-bs-target="#settingsPanel">
+        <i class="bi bi-gear"></i>
+      </button>
+    </div> -->
+  </header>
+
+  <!-- ═══════════ MAIN CONTENT ══════════════════════════════════════════════ -->
+  <div id="main-wrapper">
+    <div class="page-content">
+      {% block content %}{% endblock %}
+    </div>
+  </div>
+
+  <!-- ═══════════ TOAST CONTAINER ══════════════════════════════════════════ -->
+  <div id="toast-container"></div>
+
+  <!-- ═══════════ SETTINGS OFFCANVAS ════════════════════════════════════════ -->
+  <div class="offcanvas offcanvas-end" tabindex="-1" id="settingsPanel">
+    <div class="offcanvas-header">
+      <h5 class="offcanvas-title fw-bold">Settings</h5>
+      <button type="button" class="btn-close" data-bs-dismiss="offcanvas"></button>
+    </div>
+    <div class="offcanvas-body">
+      <div class="list-group list-group-flush">
+        <a href="/change-password"
+          class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+          Change Password <i class="bi bi-chevron-right text-muted"></i>
+        </a>
+        <a href="/profile"
+          class="list-group-item list-group-item-action d-flex justify-content-between align-items-center">
+          My Profile <i class="bi bi-chevron-right text-muted"></i>
+        </a>
+        <a href="/logout"
+          class="list-group-item list-group-item-action text-danger d-flex justify-content-between align-items-center">
+          Logout <i class="bi bi-box-arrow-right"></i>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    /* ── Sidebar toggle (mobile) ──────────────────────────────────────────── */
+    document.getElementById('sidebarToggle')?.addEventListener('click', () => {
+      document.getElementById('sidebar').classList.toggle('open');
+    });
+
+    /* ── Toast helper (global) ────────────────────────────────────────────── */
+    function showToast(msg, type = 'success') {
+      const colors = { success: '#27ae60', danger: '#e74c3c', warning: '#f39c12', info: '#0d9488' };
+      const icons = { success: 'check-circle-fill', danger: 'x-circle-fill', warning: 'exclamation-triangle-fill', info: 'info-circle-fill' };
+      const div = document.createElement('div');
+      div.className = `toast hms-toast show align-items-center text-white mb-2`;
+      div.style.background = colors[type] || colors.info;
+      div.innerHTML = `
+    <div class="d-flex">
+      <div class="toast-body d-flex align-items-center gap-2">
+        <i class="bi bi-${icons[type]}"></i> ${msg}
+      </div>
+      <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+    </div>`;
+      document.getElementById('toast-container').appendChild(div);
+      new bootstrap.Toast(div, { delay: 3500 }).show();
+      div.addEventListener('hidden.bs.toast', () => div.remove());
+    }
+
+    /* ── Pagination helper ────────────────────────────────────────────────── */
+    function renderPagination(containerId, page, totalPages, onPageChange) {
+      const el = document.getElementById(containerId);
+      if (!el) return;
+      if (totalPages <= 1) { el.innerHTML = ''; return; }
+      let html = '<ul class="pagination pagination-sm mb-0">';
+      html += `<li class="page-item ${page <= 1 ? 'disabled' : ''}">
+    <a class="page-link" href="#" data-page="${page - 1}">«</a></li>`;
+      for (let p = Math.max(1, page - 2); p <= Math.min(totalPages, page + 2); p++) {
+        html += `<li class="page-item ${p === page ? 'active' : ''}">
+      <a class="page-link" href="#" data-page="${p}">${p}</a></li>`;
+      }
+      html += `<li class="page-item ${page >= totalPages ? 'disabled' : ''}">
+    <a class="page-link" href="#" data-page="${page + 1}">»</a></li>`;
+      html += '</ul>';
+      el.innerHTML = html;
+      el.querySelectorAll('[data-page]').forEach(a =>
+        a.addEventListener('click', e => {
+          e.preventDefault();
+          const p = parseInt(a.dataset.page);
+          if (p >= 1 && p <= totalPages) onPageChange(p);
+        })
+      );
+    }
+
+    /* ── Status badge helper ──────────────────────────────────────────────── */
+    function statusBadge(status) {
+      const s = (status || '').toLowerCase().replace(/\s+/g, '-');
+      return `<span class="badge-status status-${s}">${status || '-'}</span>`;
+    }
+
+    /* ── API fetch wrapper ────────────────────────────────────────────────── */
+    async function apiRequest(url, options = {}) {
+      try {
+        const res = await fetch(url, {
+          headers: { 'Content-Type': 'application/json', ...options.headers },
+          ...options
+        });
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.detail || data.error || 'Request failed');
+        return data;
+      } catch (err) {
+        showToast(err.message, 'danger');
+        throw err;
+      }
+    }
+  </script>
+  <script src="{{ url_for('static', filename='js/modules/validation-core.js') }}"></script>
+  {% block extra_js %}{% endblock %}
+</body>
+
+</html>

@@ -1,0 +1,122 @@
+{% extends "common/base.html" %}
+{% block title %}Export Data{% endblock %}
+{% block page_heading %}Export Data{% endblock %}
+
+
+{% block sidebar_nav %}
+<span class="nav-label">Overview</span>
+<a href="/auditor/dashboard"    class="nav-link"><i class="bi bi-speedometer2"></i> Dashboard</a>
+<span class="nav-label">Read-Only Views</span>
+<a href="/auditor/appointments" class="nav-link"><i class="bi bi-calendar2-check"></i> Appointments</a>
+<a href="/auditor/patients"  class="nav-link"><i class="bi bi-person-lines-fill"></i> Patients</a>
+<a href="/auditor/doctors"  class="nav-link"><i class="bi bi-person-badge-fill"></i> Doctors</a>
+<a href="/auditor/billing" class="nav-link"><i class="bi bi-receipt"></i> Billing</a>
+<a href="/auditor/export"  class="nav-link active"><i class="bi bi-download"></i> Export</a>
+<span class="nav-label">Compliance</span>
+<a href="/auditor/audit-logs"   class="nav-link"><i class="bi bi-journal-text"></i> Audit Logs</a>
+<span class="nav-label">Account</span>
+<a href="/logout" class="nav-link text-danger"><i class="bi bi-box-arrow-right"></i> Logout</a>
+{% endblock %}
+
+
+{% block content %}
+<!-- EXPORT FILTERS -->
+<div class="hms-card mb-4">
+  <div class="card-header">
+    <i class="bi bi-funnel-fill text-primary"></i>
+    <h6>Filters (Optional)</h6>
+  </div>
+
+  <div class="card-body">
+
+    <form method="POST" action="/auditor/api/export">
+
+      <!-- FILTER ROW -->
+      <div class="row g-3 mb-3">
+
+        <!-- Search -->
+        <div class="col-md-3">
+          <label class="form-label small text-muted">Search</label>
+          <input type="text" name="search" class="form-control form-control-sm"
+                 placeholder="Name / ID / Email">
+        </div>
+
+        <!-- Status -->
+        <div class="col-md-3">
+          <label class="form-label small text-muted">Status</label>
+          <select name="status" class="form-select form-select-sm">
+            <option value="">All</option>
+            <option>Paid</option>
+            <option>Pending</option>
+            <option>Partial</option>
+            <option>Cancelled</option>
+          </select>
+        </div>
+
+        <!-- Date From -->
+        <div class="col-md-3">
+          <label class="form-label small text-muted">From Date</label>
+          <input type="date" name="date_from" class="form-control form-control-sm">
+        </div>
+
+        <!-- Date To -->
+        <div class="col-md-3">
+          <label class="form-label small text-muted">To Date</label>
+          <input type="date" name="date_to" class="form-control form-control-sm">
+        </div>
+
+      </div>
+
+      <!-- EXPORT BUTTONS -->
+      <div class="row g-3">
+
+        <div class="col-md-3">
+          <button name="type" value="patients" class="btn btn-success w-100">
+            <i class="bi bi-people-fill me-1"></i> Patients
+          </button>
+        </div>
+
+        <div class="col-md-3">
+          <button name="type" value="appointments" class="btn btn-primary w-100">
+            <i class="bi bi-calendar-check me-1"></i> Appointments
+          </button>
+        </div>
+
+        <div class="col-md-3">
+          <button name="type" value="billing" class="btn btn-warning w-100">
+            <i class="bi bi-receipt me-1"></i> Billing
+          </button>
+        </div>
+
+        <div class="col-md-3">
+          <button name="type" value="audit" class="btn btn-dark w-100">
+            <i class="bi bi-shield-check me-1"></i> Audit Logs
+          </button>
+        </div>
+
+      </div>
+
+    </form>
+
+  </div>
+</div>
+
+<!-- INFO CARD -->
+<div class="hms-card">
+  <div class="card-body text-muted small">
+
+    <p class="mb-2">
+      <i class="bi bi-info-circle text-primary me-1"></i>
+      You can export filtered data as CSV reports.
+    </p>
+
+    <ul class="mb-0">
+      <li>Apply filters before exporting</li>
+      <li>Data will be downloaded instantly</li>
+      <li>Supports Patients, Appointments, Billing, and Audit Logs</li>
+    </ul>
+
+  </div>
+</div>
+
+{% endblock %}

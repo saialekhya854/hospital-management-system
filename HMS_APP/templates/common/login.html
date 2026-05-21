@@ -1,0 +1,141 @@
+{% extends "public/base_public.html" %}
+{% block title %}Login{% endblock %}
+
+{% block content %}
+
+<!-- Hero bar -->
+<div class="login-page-hero">
+  <div class="container text-center">
+    <p style="color:rgba(255,255,255,.65);font-size:.82rem;text-transform:uppercase;letter-spacing:2px;">LifeCare Hospitals Portal</p>
+    <h2>Login to Your Account</h2>
+    <p>Access appointments, medical records, billing &amp; more</p>
+  </div>
+</div>
+
+<!-- Login section -->
+<section class="hms-login-page">
+  <div class="container">
+    <div class="row justify-content-center align-items-stretch g-0" style="max-width:900px;margin:0 auto;">
+
+      <!-- Info panel -->
+      <div class="col-lg-5 d-none d-lg-block">
+        <div class="login-info-panel h-100">
+          <h3><i class="bi bi-hospital-fill me-2"></i>Welcome Back</h3>
+          <p>Login to access your personalised healthcare services and stay connected with LifeCare Hospitals.</p>
+          <ul>
+            <li><i class="bi bi-calendar2-check"></i> View &amp; Manage Appointments</li>
+            <li><i class="bi bi-file-earmark-medical"></i> Access Medical Reports</li>
+            <li><i class="bi bi-camera-video"></i> Online Consultations</li>
+            <li><i class="bi bi-receipt"></i> Billing &amp; Payment History</li>
+            <li><i class="bi bi-chat-dots"></i> Doctor Communication</li>
+            <li><i class="bi bi-shield-lock"></i> Secure &amp; Private</li>
+          </ul>
+
+          <!-- <div style="margin-top:2rem;padding:1rem;background:rgba(255,255,255,.1);border-radius:10px;">
+            <p style="color:rgba(255,255,255,.7);font-size:.82rem;margin:0;">
+              <i class="bi bi-info-circle me-1"></i>
+              New patient? <a href="{{ url_for('common.register') }}" style="color:#4fd1c7;font-weight:600;">Register here</a> to create your account.
+            </p>
+          </div> -->
+        </div>
+      </div>
+
+      <!-- Login form -->
+      <div class="col-lg-7">
+        <div class="login-card h-100" style="border-radius:0 20px 20px 0;">
+          <h3>Sign In</h3>
+          <p class="subtitle">Enter your credentials to continue</p>
+
+          {% if error %}
+          <div class="alert alert-danger d-flex align-items-center gap-2" role="alert">
+            <i class="bi bi-exclamation-triangle-fill"></i> {{ error }}
+          </div>
+          {% endif %}
+
+          {% if success %}
+          <div class="alert alert-success d-flex align-items-center gap-2" role="alert">
+            <i class="bi bi-check-circle-fill"></i> {{ success }}
+          </div>
+          {% endif %}
+
+          <form method="POST" action="/login">
+
+            <div class="form-group mb-3">
+              <label class="form-label" style="font-weight:600;font-size:.88rem;color:#444;">Email Address</label>
+              <div class="input-group">
+                <span class="input-group-text" style="background:var(--BG);border-color:var(--BORDER);"><i class="bi bi-envelope-fill" style="color:var(--P);"></i></span>
+                <input type="email" name="email" class="form-control" placeholder="Enter your email" required
+                       style="border-left:none;border-color:var(--BORDER);">
+              </div>
+            </div>
+
+            <div class="form-group mb-4">
+              <label class="form-label" style="font-weight:600;font-size:.88rem;color:#444;">Password</label>
+              <div class="input-group">
+                <span class="input-group-text" style="background:var(--BG);border-color:var(--BORDER);"><i class="bi bi-lock-fill" style="color:var(--P);"></i></span>
+                <input type="password" name="password" id="pwdField" class="form-control" placeholder="Enter your password" required
+                       style="border-left:none;border-right:none;border-color:var(--BORDER);">
+                <button type="button" class="input-group-text" style="background:#fff;border-color:var(--BORDER);cursor:pointer;"
+                        onclick="togglePwd()" title="Show/Hide password">
+                  <i class="bi bi-eye" id="pwdEyeIcon" style="color:#aaa;"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mb-4">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="rememberMe">
+                <label class="form-check-label" for="rememberMe" style="font-size:.88rem;color:#666;">Remember me</label>
+              </div>
+              <a href="{{ url_for('common.reset_password') }}" style="font-size:.85rem;color:var(--P);text-decoration:none;font-weight:600;">Reset Password</a>
+            </div>
+
+            <button type="submit" class="btn-login">
+              <i class="bi bi-box-arrow-in-right me-2"></i>Sign In
+            </button>
+
+          </form>
+
+          <div style="text-align:center;margin-top:1.8rem;padding-top:1.5rem;border-top:1px solid var(--BORDER);">
+            <p style="font-size:.88rem;color:#888;margin:0;">
+              Don't have an account?
+              <a href="{{ url_for('common.register') }}" style="color:var(--P);font-weight:700;text-decoration:none;">Register as Patient</a>
+            </p>
+          </div>
+
+          <!-- Role quick-access badges -->
+          <div style="margin-top:1.5rem;">
+            <!-- <p style="font-size:.75rem;color:#bbb;text-align:center;margin-bottom:.7rem;text-transform:uppercase;letter-spacing:1px;">Portal Access For</p> -->
+            <!-- <div style="display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center;">
+              {% for role in ['Patient','Doctor','Receptionist','Admin'] %}
+              <span style="background:var(--BG);border:1px solid var(--BORDER);color:#666;border-radius:20px;padding:.25rem .85rem;font-size:.75rem;font-family:var(--FN);font-weight:600;">
+                {{ role }}
+              </span>
+              {% endfor %}
+            </div> -->
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+{% endblock %}
+
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/forms/login-validation.js') }}"></script>
+<script>
+function togglePwd() {
+  var f = document.getElementById('pwdField');
+  var ic = document.getElementById('pwdEyeIcon');
+  if (f.type === 'password') {
+    f.type = 'text';
+    ic.classList.replace('bi-eye', 'bi-eye-slash');
+  } else {
+    f.type = 'password';
+    ic.classList.replace('bi-eye-slash', 'bi-eye');
+  }
+}
+</script>
+{% endblock %}
