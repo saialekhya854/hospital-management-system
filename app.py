@@ -10,6 +10,7 @@ import atexit
 from sendgrid import SendGridAPIClient
 from sendgrid.helpers.mail import Mail as SGMail
 import os
+from datetime import timezone
 import config
 
 # IMPORTANT
@@ -27,6 +28,8 @@ from routes.public_routes       import public_bp
 
 
 # ── App factory ───────────────────────────────────────────────────────────────
+TIMEZONE = "UTC"
+UTC = timezone.utc
 def create_app():
 
     app = Flask(
@@ -86,7 +89,7 @@ def create_app():
 # Inside create_app(), after db.init_app(app):
     def auto_mark_no_shows():
         """Background job: mark overdue Scheduled appointments as No-Show."""
-        from datetime import date, datetime, timedelta
+        from datetime import date, datetime, timedelta, timezone
         with app.app_context():
             from database import get_db
             from models import Appointment
@@ -114,7 +117,12 @@ def create_app():
                 t = getattr(a, "appointment_Time", None)
                 if t:
                     try:
-                        if datetime.combine(today, t) <= cutoff:
+                        appt_dt = datetime.combine(
+                            today,
+                            t
+                        ).replace(tzinfo=timezone.utc)
+
+                        if appt_dt <= cutoff:
                             a.appointment_status = "No-Show"
                             updated += 1
                     except Exception:

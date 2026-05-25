@@ -3,6 +3,7 @@ from database import get_db
 from models import Bill, Payment, Patient, AuditLog
 from config import PAGINATION
 import datetime, math
+from datetime import timezone
 
 billing_bp = Blueprint("billing", __name__)
 
@@ -177,8 +178,12 @@ def api_record_payment():
 
     payment_date = body.get("payment_date")
 
-    paid_at = datetime.datetime.strptime(payment_date, "%Y-%m-%d").date() \
-          if payment_date else datetime.date.today()
+    paid_at = (
+    datetime.datetime.strptime(payment_date, "%Y-%m-%d")
+    .replace(tzinfo=timezone.utc)
+    if payment_date
+    else datetime.datetime.now(timezone.utc)
+)
 
     payment = Payment(
         bill_id = bill.bill_id,

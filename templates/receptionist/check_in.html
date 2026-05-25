@@ -106,7 +106,7 @@ async function loadPending(page = 1) {
           <tbody>
             ${data.items.map(a => `
               <tr>
-                <td><strong>${a.appointment_time || '—'}</strong></td>
+                <td><strong>${new Date(a.appointment_time).toLocaleTimeString('en-IN') || '—'}</strong></td>
                 <td>${a.patient_name}</td>
                 <td>${a.doctor_name}</td>
                 <td>${a.dept_name || '—'}</td>

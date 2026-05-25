@@ -323,7 +323,9 @@
 <script>
   loadTreatmentCatalogue();
   let weekOffset = 0;
-  let selectedDate = new Date().toISOString().split('T')[0];
+  let selectedDate = new Date(
+  Date.now() - new Date().getTimezoneOffset() * 60000
+).toISOString().split('T')[0];
   let calPage = 1;
   const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -334,7 +336,9 @@
     for (let i = 0; i < 7; i++) {
       const d = new Date(today);
       d.setDate(today.getDate() + weekOffset * 7 + i);
-      const iso = d.toISOString().split('T')[0];
+      const iso = new Date(
+  d.getTime() - d.getTimezoneOffset() * 60000
+).toISOString().split('T')[0];
       const div = document.createElement('div');
       div.className = 'week-day' + (iso === selectedDate ? ' active' : '');
       div.dataset.date = iso;
@@ -410,7 +414,9 @@
 let treatmentApptId = null;
 
 function todayISO() {
-  return new Date().toISOString().split('T')[0];
+  return new Date(
+    Date.now() - new Date().getTimezoneOffset() * 60000
+  ).toISOString().split('T')[0];
 }
 
 /* Search Patients */

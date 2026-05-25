@@ -154,11 +154,15 @@
 
   // Date constraints
   const today = new Date();
-  const minDate = today.toISOString().split('T')[0];
+  const minDate = new Date(
+  today.getTime() - today.getTimezoneOffset() * 60000
+).toISOString().split('T')[0];
   const future = new Date();
   future.setMonth(future.getMonth() + 6);
   if (future.getDate() !== today.getDate()) future.setDate(0);
-  const maxDate = future.toISOString().split('T')[0];
+  const maxDate = new Date(
+  future.getTime() - future.getTimezoneOffset() * 60000
+).toISOString().split('T')[0];
   const dateInput = document.getElementById('apptDate');
   dateInput.setAttribute('min', minDate);
   dateInput.setAttribute('max', maxDate);

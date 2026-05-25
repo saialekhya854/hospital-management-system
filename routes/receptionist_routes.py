@@ -19,7 +19,7 @@ from models import (
 )
 from config import PAGINATION
 import math
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from werkzeug.security import generate_password_hash
 from flask_mail import Message
 from config import mail
@@ -42,7 +42,7 @@ def _log(db, action, entity=None, detail=None):
     db.add(AuditLog(
         user_id=session.get("user_id"), user_name=session.get("user_name",""),
         role=session.get("role",""), action=action, entity=entity, detail=detail,
-        timestamp=datetime.now()
+        timestamp=datetime.now(timezone.utc)
     ))
     db.commit()
 
@@ -100,7 +100,7 @@ def api_dashboard_stats():
     if g: return jsonify({"detail":"Forbidden"}), 403
 
     db    = next(get_db())
-    today = datetime.now().date()
+    today = datetime.now(timezone.utc).date()
     appts_today = db.query(func.count(Appointment.appointment_Id))\
         .filter(Appointment.appointment_Date == today).scalar() or 0
 
@@ -195,7 +195,7 @@ def api_today_queue():
     page     = int(request.args.get("page", 1))
     per_page = PAGINATION["appointments"]
     db       = next(get_db())
-    today = datetime.now().date()
+    today = datetime.now(timezone.utc).date()
 
     q = db.query(Appointment, Patient, Doctor, Department)\
           .join(Patient,    Patient.patient_Id == Appointment.patient_Id)\
@@ -462,7 +462,7 @@ def api_slots():
         for a in booked if a.slot_time
     ]
 
-    now = datetime.now()
+    now = datetime.now(timezone.utc)
 
     slots = []
 
@@ -502,8 +502,8 @@ def api_pending_checkin():
     search   = request.args.get("search","").strip()
 
     db    = next(get_db())
-    today = datetime.now().date()
-    now   = datetime.now()
+    today = datetime.now(timezone.utc).date()
+    now = datetime.now(timezone.utc)
 
     from sqlalchemy import func
 
@@ -520,9 +520,9 @@ def api_pending_checkin():
 
         # combine date + slot time
         appt_datetime = datetime.combine(
-            appt.appointment_Date,
-            appt.slot_time
-        )
+    appt.appointment_Date,
+    appt.slot_time
+).replace(tzinfo=timezone.utc)
 
         # if 30 mins passed
         if now > appt_datetime + timedelta(minutes=30):
@@ -607,7 +607,7 @@ def api_check_in(aid):
 
     # STEP 2: UPDATE STATUS
     appt.appointment_status = "checked-in"
-    appt.checked_in_at = datetime.now()
+    appt.checked_in_at = datetime.now(timezone.utc)
 
     # STEP 3: SAVE
     db.commit()
@@ -788,7 +788,7 @@ def generate_bill():
         amount_paid=0,
         balance=total_amount,
         status="Pending",
-        created_at = datetime.now().date()
+        created_at = datetime.now(timezone.utc)
     )
 
     db.add(bill)
@@ -1215,7 +1215,7 @@ def verify_payment():
         payment_method="UPI",
         transaction_id="CASH-" + uuid.uuid4().hex[:10].upper(),
         payment_status="Success",
-        paid_at=datetime.now() 
+        paid_at=datetime.now(timezone.utc) 
     )
 
     db.add(payment)
@@ -1252,7 +1252,7 @@ def complete_cash_payment():
         payment_method="Cash",
         transaction_id= uuid.uuid4().hex[:10].upper(),
         payment_status="Success",
-        paid_at=datetime.now()
+        paid_at=datetime.now(timezone.utc)
     )
 
     db.add(payment)

@@ -106,7 +106,7 @@
           <td class="text-muted fw-semibold">B-${b.id}</td>
           <td>${b.patient || '—'}</td>
           <td>${b.bill_type || '—'}</td>
-          <td>${b.created_at}</td>
+          <td>${new Date(b.created_at).toLocaleString('en-IN')}</td>
           <td>${statusBadge(b.status)}</td>
           <td class="text-end">${fmtINR(b.total)}</td>
           <td class="text-end text-success fw-semibold">${fmtINR(b.paid)}</td>

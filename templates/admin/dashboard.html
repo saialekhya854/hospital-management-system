@@ -506,7 +506,10 @@ async function loadRecent(page = 1) {
         <td>${a.patient_name}</td>
         <td>${a.doctor_name}</td>
         <td>${a.dept_name}</td>
-        <td>${a.appointment_date}</td>
+        <td>${
+  new Date(a.appointment_date)
+    .toLocaleString('en-IN')
+}</td>
         <td>${statusBadge(a.appointment_status)}</td>
       </tr>
     `).join('');

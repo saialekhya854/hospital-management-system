@@ -4,6 +4,7 @@ from database import get_db
 from models import User, Patient, AuditLog, Role
 from config import SECRET_KEY
 import datetime
+from datetime import timezone
 from werkzeug.security import check_password_hash, generate_password_hash
 from itsdangerous import URLSafeTimedSerializer, SignatureExpired, BadSignature
 
@@ -18,7 +19,7 @@ def log_action(db: Session, user_id, user_name, role, action, entity=None, detai
     db.add(AuditLog(
         user_id=user_id, user_name=user_name, role=role,
         action=action, entity=entity, detail=detail,
-        timestamp=datetime.datetime.now()
+        timestamp=datetime.datetime.now(timezone.utc)
     ))
     db.commit()
 

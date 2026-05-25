@@ -335,7 +335,7 @@
 
 
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from database import db
 from sqlalchemy.sql import func
@@ -592,7 +592,7 @@ class Payment(db.Model):
     transaction_id = db.Column(db.String(255), unique=True)
     payment_status = db.Column(db.String(20))
 
-    paid_at = db.Column(db.DateTime, server_default=func.now())
+    paid_at = db.Column(db.DateTime(timezone=True))
 
 
 # ---------------- TREATMENT ----------------
@@ -704,9 +704,9 @@ class FeeMaster(db.Model):
 
     is_active = db.Column(db.Boolean, default=True)
 
-    effective_from = db.Column(db.DateTime, default=datetime.utcnow)
+    effective_from = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 
 class BillItem(db.Model):
@@ -727,7 +727,7 @@ class BillItem(db.Model):
 
     quantity = db.Column(db.Integer, default=1)
 
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 class ContactMessage(db.Model):
     __tablename__ = "contact_messages"
@@ -740,7 +740,7 @@ class ContactMessage(db.Model):
     message     = db.Column(db.Text, nullable=False)
     is_read     = db.Column(db.Boolean, default=False)
     replied_at  = db.Column(db.DateTime, nullable=True)
-    created_at  = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at  = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
 
 class DoctorLeave(db.Model):
     __tablename__ = "doctor_leaves"
@@ -782,7 +782,7 @@ class DoctorLeave(db.Model):
     )
     created_at = db.Column(
         db.DateTime,
-        default=datetime.utcnow
+        default=lambda: datetime.now(timezone.utc)
     )
     doctor = db.relationship(
         "Doctor",

@@ -195,7 +195,7 @@
           <td>BL-${String(b.bill_id).padStart(4, '0')}</td>
           <td>${b.patient_name}</td>
           <td>${b.treatment || '—'}</td>
-          <td>${b.created_at}</td>
+          <td>${new Date(b.created_at).toLocaleString('en-IN')}</td>
           <td>₹${(b.total_amount || 0).toFixed(2)}</td>
           <td>₹${(b.amount_paid || 0).toFixed(2)}</td>
           <td class="fw-bold text-danger">₹${(b.balance || 0).toFixed(2)}</td>
@@ -221,7 +221,10 @@
     document.getElementById('paymentPanel').scrollIntoView({ behavior: 'smooth' });
 
     document.getElementById('activeBillId').value = billId;
-    document.getElementById('payDate').value = new Date().toISOString().split('T')[0];
+    document.getElementById('payDate').value =
+  new Date(
+    Date.now() - new Date().getTimezoneOffset() * 60000
+  ).toISOString().split('T')[0];
 
     // RESET QR
     resetQR();
@@ -236,7 +239,7 @@
       document.getElementById('billSummaryBody').innerHTML = `
         <table class="table table-sm mb-0">
           <tr><td>Patient</td><td><strong>${b.patient_name}</strong></td></tr>
-          <tr><td>Bill Date</td><td>${b.created_at}</td></tr>
+          <tr><td>Bill Date</td><td>${new Date(b.created_at).toLocaleString('en-IN')}</td></tr>
           <tr><td>Total</td><td>₹${b.total_amount.toFixed(2)}</td></tr>
           <tr><td>Paid</td><td class="text-success">₹${b.amount_paid.toFixed(2)}</td></tr>
           <tr><td class="fw-bold">Balance</td><td class="text-danger fw-bold">₹${b.balance.toFixed(2)}</td></tr>

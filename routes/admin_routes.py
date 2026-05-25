@@ -1,6 +1,7 @@
 from flask import Blueprint, flash, render_template, request, session, redirect, jsonify
 from sqlalchemy import case, func, text
 import datetime, math
+from datetime import timezone
 from flask import current_app
 from werkzeug.security import generate_password_hash
 import random
@@ -955,7 +956,7 @@ def _log(db, action, detail=None):
         user_name=session.get("user_name",""),
         role=session.get("role",""),
         action=action, detail=detail,
-        timestamp=datetime.datetime.now()
+        timestamp=datetime.datetime.now(timezone.utc)
     ))
     db.commit()
 
@@ -1235,7 +1236,7 @@ def approve_doctor_leave(leave_id):
 
     leave.approved_by = session.get("user_id")
 
-    leave.approved_on = datetime.datetime.utcnow()
+    leave.approved_on = datetime.datetime.now(timezone.utc)
 
     db.commit()
 
@@ -1260,7 +1261,7 @@ def reject_doctor_leave(leave_id):
 
     leave.approved_by = session.get("user_id")
 
-    leave.approved_on = datetime.datetime.utcnow()
+    leave.approved_on = datetime.datetime.now(timezone.utc)
 
     db.commit()
 

@@ -3,7 +3,7 @@ from pydoc import doc
 from flask import Blueprint, render_template, request, session, redirect, jsonify
 from database import get_db
 from models import Doctor, DoctorLeave, User, Department, Appointment, Patient, MedicalRecord, TreatmentCatalogue, Bill, AuditLog
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, timedelta, timezone
 from sqlalchemy import func
 import datetime as dt
 from werkzeug.utils import secure_filename
@@ -465,7 +465,10 @@ def mark_no_shows():
         appt_time = getattr(appt, "appointment_Time", None)
         if appt_time:
             try:
-                scheduled_dt = datetime.combine(today, appt_time)
+                scheduled_dt = datetime.combine(
+    today,
+    appt_time
+).replace(tzinfo=timezone.utc)
                 if scheduled_dt <= cutoff_time:
                     appt.appointment_status = "no-show"
                     updated += 1
@@ -589,9 +592,9 @@ def api_add_treatment():
         if visit_date_str and visit_date_str != "":
             visit_date = datetime.strptime(visit_date_str, "%Y-%m-%d").date()
         else:
-            visit_date = datetime.today().date()
+            visit_date = datetime.now(timezone.utc).date()
     except Exception:
-        visit_date = datetime.today().date()
+        visit_date = datetime.now(timezone.utc).date()
 
     # ── Parse next-visit date ─────────────────────────────────────────────────
     next_visit_str = body.get("next_visit")
@@ -627,7 +630,7 @@ def api_add_treatment():
     # ── Update appointment status → Completed ─────────────────────────────────
     if appt and appt.appointment_status not in ("Completed", "Cancelled"):
         appt.appointment_status = "completed"
-        appt.completed_at       = datetime.now()
+        appt.completed_at = datetime.now(timezone.utc)
 
     db.commit()
     db.refresh(record)
@@ -662,7 +665,7 @@ def api_add_treatment():
             action    = "AUTO_BILL_CREATED",
             entity    = f"APT-{str(appointment_id).zfill(4)}",
             detail    = f"Bill ₹{treatment_cost} created for patient {patient_id}",
-            timestamp = datetime.now(),
+            timestamp = datetime.now(timezone.utc),
         ))
         db.commit()
 
@@ -684,7 +687,7 @@ def calendar_stats():
 
     db    = next(get_db())
     did   = session.get("entity_id")
-    today = datetime.today().date()
+    today = datetime.now(timezone.utc).date()
 
     base = db.query(Appointment).filter(Appointment.doct_Id == did)
 

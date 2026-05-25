@@ -11,6 +11,7 @@ from models import (
     DoctorLeave
 )
 import datetime
+from datetime import timezone
 
 patient_bp = Blueprint("patient", __name__, url_prefix="/patient")
 
@@ -118,7 +119,7 @@ def api_appointments():
     db = next(get_db())
     tab = request.args.get("tab", "All")
 
-    today = datetime.date.today()
+    today = datetime.datetime.now(timezone.utc).date()
 
     appts = db.query(Appointment).filter(
         Appointment.patient_Id == _patient_id()
@@ -168,7 +169,7 @@ def create_appointment():
     data = request.get_json()
     db = next(get_db())
 
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(timezone.utc)
 
     appt_date = datetime.datetime.strptime(
         data.get("appointment_date"), "%Y-%m-%d"
@@ -249,11 +250,11 @@ def cancel_appointment(appt_id):
         return jsonify({"error": "Only scheduled appointments can be cancelled"}), 400
 
     # ⏱️ Optional: prevent cancel within 1 hour
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(timezone.utc)
     appt_datetime = datetime.datetime.combine(
-        appt.appointment_Date,
-        appt.slot_time
-    )
+    appt.appointment_Date,
+    appt.slot_time
+).replace(tzinfo=timezone.utc)
 
     if (appt_datetime - now).total_seconds() <= 3600:
         return jsonify({"error": "Cannot cancel within 1 hour of appointment"}), 400
@@ -290,7 +291,7 @@ def api_doctors(dept_id):
         Doctor.dept_Id == dept_id
     ).all()
 
-    today = datetime.date.today()
+    today = datetime.datetime.now(timezone.utc).date()
 
     data = []
 
@@ -352,7 +353,7 @@ def api_slots():
         for a in booked if a.slot_time
     ]
 
-    now = datetime.datetime.now()
+    now = datetime.datetime.now(timezone.utc)
 
     slots = []
     for s in all_slots:

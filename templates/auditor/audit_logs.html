@@ -105,7 +105,11 @@
       } else {
         tbody.innerHTML = d.data.map(log => `
         <tr>
-          <td><small class="text-muted">${log.timestamp}</small></td>
+          <td>
+  <small class="text-muted">
+    ${new Date(log.timestamp).toLocaleString('en-IN')}
+  </small>
+</td>
           <td class="fw-semibold">${log.user || '—'}</td>
           <td>${roleBadge(log.role)}</td>
           <td>${log.action || '—'}</td>

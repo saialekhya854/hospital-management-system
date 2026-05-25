@@ -218,7 +218,9 @@
       new Chart(canvas, {
         type: 'bar',
         data: {
-          labels: data.labels,
+          labels: data.labels.map(
+  d => new Date(d).toLocaleDateString('en-IN')
+),
           datasets: [{
             label: 'Appointments',
             data: data.values,
@@ -267,7 +269,9 @@
       new Chart(canvas, {
         type: 'doughnut',
         data: {
-          labels: data.labels,
+          labels: data.labels.map(
+  d => new Date(d).toLocaleDateString('en-IN')
+),
           datasets: [{
             data: data.values,
             backgroundColor: bgColors,

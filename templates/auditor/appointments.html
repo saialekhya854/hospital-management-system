@@ -112,7 +112,7 @@
           <td>${a.patient || '—'}</td>
           <td>${a.doctor  || '—'}</td>
           <td>${a.dept    || '—'}</td>
-          <td>${a.date}</td>
+          <td>${new Date(a.date).toLocaleString('en-IN')}</td>
           <td>${statusBadge(formatStatus(a.status))}</td>
           <td>${a.payment_mode || '—'}</td>
           <td class="text-end fw-semibold">₹${Number(a.amount).toLocaleString('en-IN')}</td>
